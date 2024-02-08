@@ -90,8 +90,6 @@ if __name__ == "__main__":
                 order_task_sum = sum([d["actual_task_score"] for d in ALL_SCORES[team_name][trial_name][i]["orders"]])
                 order_sums.append(order_task_sum)
             
-            print(f"Scores for {team_name} {trial_name}: " + str(order_sums))
-            
             maximum_order_sum = max(order_sums)
             if order_sums.count(maximum_order_sum)==1:
                 ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][order_sums.index(maximum_order_sum)]
@@ -144,7 +142,7 @@ if __name__ == "__main__":
         for trial_name in TRIAL_NAMES:
             if not os.path.exists(HOME_DIR+f"/original_state_logs/{team_name}/{trial_name}"):
                 os.system(f"mkdir -p {HOME_DIR}/original_state_logs/{team_name}/{trial_name}")
-            print(f"Waiting for {CWD}/logs/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log to exist...")
+            print(f"Waiting for {CWD}/logs/{team_name}{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log to exist...")
             while not os.path.exists(f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log"):
                 pass
             print("State.log found")
