@@ -147,6 +147,6 @@ if __name__ == "__main__":
                 pass
             print("State.log found")
             os.system(f"mv {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
-            print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log\nFiltering state.log")
+            print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log\nFiltering state.log...")
             os.system(f"gz log -e -f {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log -z 100 --filter *.pose/*.pose > {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
             print(f"Put new state.log in {CWD}/logs/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
