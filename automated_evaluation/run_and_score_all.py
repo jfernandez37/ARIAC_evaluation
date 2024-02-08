@@ -3,12 +3,12 @@ from copy import copy
 
 CWD = os.getcwd()
 HOME_DIR = os.path.expanduser("~")
-NUM_ITERATIONS_PER_TRIAL = 2
+NUM_ITERATIONS_PER_TRIAL = 1
 
 # TEAM_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/competitor_configs/competitor_build_scripts") if ".yaml" in file]
 TEAM_NAMES = ["nist_competitor", "attempt"]
 # TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
-TRIAL_NAMES = ["kitting", "testing"]
+TRIAL_NAMES = ["multiple_orders"]
 ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
 
 AVERAGE_SENSOR_COST = 0
@@ -19,7 +19,8 @@ if __name__ == "__main__":
     os.system("rm -rf logs")
     for team_name in TEAM_NAMES:
         os.system(f"./build_container.sh {team_name} nvidia")
-        os.system(f"./run_trial.sh {team_name} kitting {NUM_ITERATIONS_PER_TRIAL}")
+        for trial_name in TRIAL_NAMES:
+            os.system(f"./run_trial.sh {team_name} {trial_name} {NUM_ITERATIONS_PER_TRIAL}")
         print("="*50)
         print("Completed all trials for team: "+team_name)
         print("="*50)
