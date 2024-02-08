@@ -120,7 +120,7 @@ if __name__ == "__main__":
             results_file.write("Trial_name: "+trial_name+"\n")
             for i in range(1,num_orders_in_trial+1):
                 results_file.write(",".join([f"Order{i+1} (id: {ALL_SCORES[TEAM_NAMES[0]][trial_name]['orders'][i]['order_id']}) average time: {average_order_times[i]}" for i in range(num_orders_in_trial)]))
-            results_file.write('\nTeam name,')
+            results_file.write('\n\nTeam name,')
             for i in range(1,len(ALL_SCORES[TEAM_NAMES[0]][trial_name]["orders"])+1):
                 results_file.write(f"Order {i} id,Order {i} score,Order {i} submission duration,")
             results_file.write("Trial score")
@@ -132,7 +132,7 @@ if __name__ == "__main__":
                     results_file.write(f"{ALL_SCORES[team_name][trial_name]['orders'][i]['order_id']},"+
                                        f"{ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']},"+
                                        f"{ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']},")
-                    trial_score += (TIME_WIEGHT * average_order_times[i] / ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']) + ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']
+                    trial_score += (TIME_WIEGHT * average_order_times[i] / ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']) * ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']
                 trial_score *= COST_WEIGHT * AVERAGE_SENSOR_COST / ALL_SCORES[team_name]["sensor_cost"]
                 results_file.write(f"{trial_score}")
                 results_file.write("\n")
