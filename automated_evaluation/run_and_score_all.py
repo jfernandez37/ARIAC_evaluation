@@ -1,24 +1,129 @@
 import os
 from copy import copy
+import customtkinter as ctk
+from tkinter import *
+from functools import partial
+import subprocess
 
 CWD = os.getcwd()
 HOME_DIR = os.path.expanduser("~")
 NUM_ITERATIONS_PER_TRIAL = 1
 
-# TEAM_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/competitor_configs/competitor_build_scripts") if ".yaml" in file]
-TEAM_NAMES = ["nist_competitor", "attempt"]
-# TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
-TRIAL_NAMES = ["multiple_orders"]
+TEAM_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/competitor_configs") if ".yaml" in file]
+TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
 ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
 
 AVERAGE_SENSOR_COST = 0
 COST_WEIGHT = 1
 TIME_WIEGHT = 1
 
+class Options_GUI(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.left_column, self.middle_column, self.right_column = 1,2,3
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(100, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(4, weight=1)
+
+        self.team_vars = [ctk.StringVar() for _ in range(len(TEAM_NAMES))]
+        self.trial_vars = [ctk.StringVar() for _ in range(len(TRIAL_NAMES))]
+        for a in [self.team_vars, self.trial_vars]:
+            for v in a:
+                v.set("0")
+        self.cost_weight_var = ctk.DoubleVar()
+        self.cost_weight_var.set(1.0)
+        self.time_weight_var = ctk.DoubleVar()
+        self.time_weight_var.set(1.0)
+        self.num_iter_var = ctk.IntVar()
+        self.num_iter_var.set(1.0)
+
+        self.team_selections = []
+        self.trial_selections = []
+        self.cost_weight_selection = 0.0
+        self.time_weight_selection = 0.0
+        self.num_iter_selection = 0.0
+
+        for i in range(len(self.team_vars)):
+            cb = ctk.CTkCheckBox(self, text=TEAM_NAMES[i], variable=self.team_vars[i], onvalue="1", offvalue="0", height=1, width=20)
+            cb.grid(column = self.left_column, row = i+1, sticky=NW, padx = 25)
+        select_all_teams_button = ctk.CTkButton(self, text="Select all teams", command=partial(self.select_all, self.team_vars))
+        select_all_teams_button.grid(column = self.left_column, row = len(self.team_vars)+1)
+
+        for i in range(len(self.trial_vars)):
+            cb = ctk.CTkCheckBox(self, text=TRIAL_NAMES[i], variable=self.trial_vars[i], onvalue="1", offvalue="0", height=1, width=20)
+            cb.grid(column = self.right_column, row = i+1, sticky=NW, padx = 25)
+        select_all_trials_button = ctk.CTkButton(self, text="Select all trials", command=partial(self.select_all, self.trial_vars))
+        select_all_trials_button.grid(column = self.right_column, row = len(self.trial_vars)+1)
+        
+        self.cost_weight_label = ctk.CTkLabel(self, text="Cost weight = "+str(self.cost_weight_var.get()))
+        self.cost_weight_label.grid(column = self.middle_column, row = 1)
+        self.cost_weight_slider = ctk.CTkSlider(self,variable=self.cost_weight_var,from_=1.0, to=10.0, number_of_steps=19, orientation="horizontal")
+        self.cost_weight_slider.grid(column = self.middle_column, row = 2)
+
+        self.time_weight_label = ctk.CTkLabel(self, text="Time weight = "+str(self.time_weight_var.get()))
+        self.time_weight_label.grid(column = self.middle_column, row = 3)
+        self.time_weight_slider = ctk.CTkSlider(self,variable=self.time_weight_var,from_=1.0, to=10.0, number_of_steps=19, orientation="horizontal")
+        self.time_weight_slider.grid(column = self.middle_column, row = 4)
+        
+        self.num_iter_label = ctk.CTkLabel(self, text="Number of iterations per trial per team = "+str(self.num_iter_var.get()))
+        self.num_iter_label.grid(column = self.middle_column, row = 5)
+        self.num_iter_slider = ctk.CTkSlider(self,variable=self.num_iter_var,from_=1, to=10, number_of_steps=9, orientation="horizontal")
+        self.num_iter_slider.grid(column = self.middle_column, row = 6)
+
+        self.cost_weight_var.trace_add('write', self.update_cost_weight_label)
+        self.time_weight_var.trace_add('write', self.update_time_weight_label)
+        self.num_iter_var.trace_add('write', self.update_num_iter_label)
+
+        self.save_button = ctk.CTkButton(self, text="Save selections", command=self.save_selections)
+        self.save_button.grid(column = self.middle_column, pady = 50)
+
+    def update_cost_weight_label(self,_,__,___):
+        self.cost_weight_label.configure(text = "Cost weight = "+str(self.cost_weight_var.get()))
+    
+    def update_time_weight_label(self,_,__,___):
+        self.time_weight_label.configure(text = "Time weight = "+str(self.time_weight_var.get()))
+    
+    def update_num_iter_label(self,_,__,___):
+        self.num_iter_label.configure(text = "Number of iterations per trial per team = "+str(self.num_iter_var.get()))
+    
+    def select_all(self, l):
+        for v in l:
+            v.set("1")
+    
+    def save_selections(self):
+        self.team_selections = [TEAM_NAMES[i] for i in range(len(TEAM_NAMES)) if self.team_vars[i].get()=="1"]
+        self.trial_selections = [TRIAL_NAMES[i] for i in range(len(TRIAL_NAMES)) if self.trial_vars[i].get()=="1"]
+        self.cost_weight_selection = self.cost_weight_var.get()
+        self.time_weight_selection = self.time_weight_var.get()
+        self.num_iter_selection = self.num_iter_var.get()
+        self.destroy()
+
 if __name__ == "__main__":
+    setup_gui = Options_GUI()
+    setup_gui.mainloop()
+    if len(setup_gui.team_selections)>0:
+        TEAM_NAMES = setup_gui.team_selections
+    if len(setup_gui.trial_selections)>0:
+        TRIAL_NAMES = setup_gui.trial_selections
+    if setup_gui.time_weight_selection != 0.0:
+        TIME_WIEGHT = setup_gui.time_weight_selection
+    if setup_gui.cost_weight_selection != 0.0:
+        COST_WEIGHT = setup_gui.cost_weight_selection
+    if setup_gui.num_iter_selection != 0.0:
+        NUM_ITERATIONS_PER_TRIAL = setup_gui.num_iter_selection
+    nvidia_present = False
+    try:
+        subprocess.check_output('nvidia-smi')
+        nvidia_present = True
+        print("Nvidia card detected")
+    except:
+        print("No Nvidia card detected")
+
     os.system("rm -rf logs")
     for team_name in TEAM_NAMES:
-        os.system(f"./build_container.sh {team_name} nvidia")
+        os.system(f"docker container rm {team_name} --force")
+        os.system(f"./build_container.sh {team_name}" + (" nvidia" if nvidia_present else ""))
         for trial_name in TRIAL_NAMES:
             os.system(f"./run_trial.sh {team_name} {trial_name} {NUM_ITERATIONS_PER_TRIAL}")
         print("="*50)
@@ -87,9 +192,12 @@ if __name__ == "__main__":
                             ALL_SCORES[team_name]["sensor_cost"] = int(float(info[1]))
             order_sums = []
             for i in range(NUM_ITERATIONS_PER_TRIAL):
-                order_task_sum = sum([d["actual_task_score"] for d in ALL_SCORES[team_name][trial_name][i]["orders"]])
-                order_sums.append(order_task_sum)
-            
+                try:
+                    order_task_sum = sum([d["actual_task_score"] for d in ALL_SCORES[team_name][trial_name][i]["orders"]])
+                    order_sums.append(order_task_sum)
+                except:
+                    pass
+                
             maximum_order_sum = max(order_sums)
             if order_sums.count(maximum_order_sum)==1:
                 ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][order_sums.index(maximum_order_sum)]
