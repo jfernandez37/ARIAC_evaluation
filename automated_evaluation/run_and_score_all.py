@@ -58,12 +58,12 @@ class Options_GUI(ctk.CTk):
         
         self.cost_weight_label = ctk.CTkLabel(self, text="Cost weight = "+str(self.cost_weight_var.get()))
         self.cost_weight_label.grid(column = self.middle_column, row = 1)
-        self.cost_weight_slider = ctk.CTkSlider(self,variable=self.cost_weight_var,from_=1.0, to=10.0, number_of_steps=19, orientation="horizontal")
+        self.cost_weight_slider = ctk.CTkSlider(self,variable=self.cost_weight_var,from_=1.0, to=10.0, number_of_steps=18, orientation="horizontal")
         self.cost_weight_slider.grid(column = self.middle_column, row = 2)
 
         self.time_weight_label = ctk.CTkLabel(self, text="Time weight = "+str(self.time_weight_var.get()))
         self.time_weight_label.grid(column = self.middle_column, row = 3)
-        self.time_weight_slider = ctk.CTkSlider(self,variable=self.time_weight_var,from_=1.0, to=10.0, number_of_steps=19, orientation="horizontal")
+        self.time_weight_slider = ctk.CTkSlider(self,variable=self.time_weight_var,from_=1.0, to=10.0, number_of_steps=18, orientation="horizontal")
         self.time_weight_slider.grid(column = self.middle_column, row = 4)
         
         self.num_iter_label = ctk.CTkLabel(self, text="Number of iterations per trial per team = "+str(self.num_iter_var.get()))
@@ -125,7 +125,23 @@ if __name__ == "__main__":
         os.system(f"docker container rm {team_name} --force")
         os.system(f"./build_container.sh {team_name}" + (" nvidia" if nvidia_present else ""))
         for trial_name in TRIAL_NAMES:
-            os.system(f"./run_trial.sh {team_name} {trial_name} {NUM_ITERATIONS_PER_TRIAL}")
+            for _ in range(NUM_ITERATIONS_PER_TRIAL):
+                run_correctly = False
+                while not run_correctly:
+                    os.system(f"./run_trial.sh {team_name} {trial_name} {1}")
+                    trials_run = [file.path for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path]
+                    trials_run = [dir_name.split("/")[-1] for dir_name in trials_run]
+                    most_recent_trial_num = sorted([int(trial.split("_")[-1]) for trial in trials_run])[-1]
+                    while not os.path.exists(f"{CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}/trial_log.txt"):
+                        pass
+                    with open(f"{CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}/trial_log.txt",'r') as file:
+                        num_lines = len(file.readlines())
+                    if num_lines==1:
+                        print("Trial did not run correctly. Trying again")
+                        os.system(f"rm -rf {CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}")
+                    else:
+                        run_correctly = True
+
         print("="*50)
         print("Completed all trials for team: "+team_name)
         print("="*50)
@@ -256,5 +272,10 @@ if __name__ == "__main__":
             print("State.log found")
             os.system(f"mv {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
             print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log\nFiltering state.log...")
-            os.system(f"gz log -e -f {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log -z 100 --filter *.pose/*.pose > {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
-            print(f"Put new state.log in {CWD}/logs/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
+    commands = []
+    for team_name in TEAM_NAMES:
+        for trial_name in TRIAL_NAMES:
+            commands.append(f"gz log -e -f {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log -z 100 --filter *.pose/*.pose > {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
+    os.system(" & ".join(commands))
+    os.system("wait")
+    print(f"Put new state.log in {CWD}/logs/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
