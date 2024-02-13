@@ -112,6 +112,8 @@ if __name__ == "__main__":
         COST_WEIGHT = setup_gui.cost_weight_selection
         NUM_ITERATIONS_PER_TRIAL = setup_gui.num_iter_selection
         ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
+        for team_name in ALL_SCORES.keys():
+            ALL_SCORES[team_name]["trial_scores"] = []
     nvidia_present = False
     try:
         subprocess.check_output('nvidia-smi')
@@ -173,8 +175,6 @@ if __name__ == "__main__":
                                     info[1] = float(info[1])
                                 except:
                                     pass
-                            print(info)
-                            print(len(ALL_SCORES[team_name][trial_name]))
                             ALL_SCORES[team_name][trial_name][i-1][info[0]] = info[1]
                         elif "====" in line:
                             equal_lines +=1
@@ -259,9 +259,21 @@ if __name__ == "__main__":
                                        f"{ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']},")
                     trial_score += (TIME_WIEGHT * average_order_times[i] / ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']) * ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']
                 trial_score *= COST_WEIGHT * AVERAGE_SENSOR_COST / ALL_SCORES[team_name]["sensor_cost"]
+                ALL_SCORES[team_name]["trial_scores"].append(trial_score)
                 results_file.write(f"{trial_score}")
                 results_file.write("\n")
             results_file.write("\n"*3)
+        results_file.write(",Leaderboard\nPosition,Team,Score\n")
+        results_file.write(",".join(["="*10 for _ in range(3)])+"\n")
+        final_scores = []
+        for team_name in TEAM_NAMES:
+            final_scores.append((team_name,sum(ALL_SCORES[team_name]["trial_scores"])))
+        final_scores.sort(key = lambda x: x[1])
+        place=1
+        for team_score in final_scores[::-1]:
+            results_file.write(f"{place},{team_score[0]},{team_score[1]}\n")
+            place+=1
+            
     
     if not os.path.exists(HOME_DIR+"/original_state_logs"):
         os.system(f"mkdir {HOME_DIR}/original_state_logs")
@@ -269,16 +281,17 @@ if __name__ == "__main__":
         for trial_name in TRIAL_NAMES:
             if not os.path.exists(HOME_DIR+f"/original_state_logs/{team_name}/{trial_name}"):
                 os.system(f"mkdir -p {HOME_DIR}/original_state_logs/{team_name}/{trial_name}")
-            print(f"Waiting for {CWD}/logs/{team_name}{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log to exist...")
+            print(f"Waiting for {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log to exist...")
             while not os.path.exists(f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log"):
                 pass
             print("State.log found")
             os.system(f"mv {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
-            print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log\nFiltering state.log...")
+            print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
     commands = []
     for team_name in TEAM_NAMES:
         for trial_name in TRIAL_NAMES:
             commands.append(f"gz log -e -f {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log -z 100 --filter *.pose/*.pose > {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
+    print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
     os.system(" & ".join(commands))
     os.system("wait")
-    print(f"Put new state.log in {CWD}/logs/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
+    print(f"Saved state log" + ("" if len(commands)<=1 else "s"))
