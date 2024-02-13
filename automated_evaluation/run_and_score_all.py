@@ -11,7 +11,7 @@ NUM_ITERATIONS_PER_TRIAL = 1
 
 TEAM_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/competitor_configs") if ".yaml" in file]
 TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
-ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
+ALL_SCORES = {}
 
 AVERAGE_SENSOR_COST = 0
 COST_WEIGHT = 1
@@ -102,16 +102,16 @@ class Options_GUI(ctk.CTk):
 if __name__ == "__main__":
     setup_gui = Options_GUI()
     setup_gui.mainloop()
-    if len(setup_gui.team_selections)>0:
+    if 0 in [len(setup_gui.team_selections),len(setup_gui.trial_selections),setup_gui.time_weight_selection,setup_gui.cost_weight_selection, setup_gui.num_iter_selection]:
+        print("Exited out of GUI. Not running any trials.")
+        quit()
+    else:
         TEAM_NAMES = setup_gui.team_selections
-    if len(setup_gui.trial_selections)>0:
         TRIAL_NAMES = setup_gui.trial_selections
-    if setup_gui.time_weight_selection != 0.0:
         TIME_WIEGHT = setup_gui.time_weight_selection
-    if setup_gui.cost_weight_selection != 0.0:
         COST_WEIGHT = setup_gui.cost_weight_selection
-    if setup_gui.num_iter_selection != 0.0:
         NUM_ITERATIONS_PER_TRIAL = setup_gui.num_iter_selection
+        ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
     nvidia_present = False
     try:
         subprocess.check_output('nvidia-smi')
@@ -158,6 +158,7 @@ if __name__ == "__main__":
                     for line in file:
                         if equal_lines == 2 and ":" in line:
                             info = line.split(": ")
+                            
                             info = [s.lower() for s in info]
                             while "\t" in info[0]:
                                 info[0] = info[0].replace("\t","")
@@ -172,6 +173,8 @@ if __name__ == "__main__":
                                     info[1] = float(info[1])
                                 except:
                                     pass
+                            print(info)
+                            print(len(ALL_SCORES[team_name][trial_name]))
                             ALL_SCORES[team_name][trial_name][i-1][info[0]] = info[1]
                         elif "====" in line:
                             equal_lines +=1
