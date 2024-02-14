@@ -90,9 +90,7 @@ if __name__ == "__main__":
     except:
         print("No Nvidia card detected")
 
-    os.system("rm -rf logs")
     for team_name in TEAM_NAMES:
-        os.system(f"docker container rm {team_name} --force")
         os.system(f"./build_container.sh {team_name}" + (" nvidia" if nvidia_present else ""))
         for trial_name in TRIAL_NAMES:
             for _ in range(NUM_ITERATIONS_PER_TRIAL):
