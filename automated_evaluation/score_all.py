@@ -128,8 +128,6 @@ for team_name in TEAM_NAMES:
             times = [ALL_SCORES[team_name][trial_name][i]["completion_time"] for i in range(NUM_ITERATIONS_PER_TRIAL)]
             ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][times.index(min(times))]
             ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(NUM_ITERATIONS_PER_TRIAL-(times.index(min(times))+1))]
-        print(trial_nums)
-        print(ALL_SCORES[team_name][trial_name]["best_trial"])
 total_sensor_cost = sum([ALL_SCORES[team_name]["sensor_cost"] for team_name in TEAM_NAMES])
 AVERAGE_SENSOR_COST = total_sensor_cost / len(TEAM_NAMES)
         
