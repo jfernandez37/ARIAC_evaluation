@@ -2,6 +2,7 @@ import os
 from copy import copy
 import sys
 import getopt
+import subprocess
 
 CWD = os.getcwd()
 HOME_DIR = os.path.expanduser("~")
@@ -10,9 +11,6 @@ NUM_ITERATIONS_PER_TRIAL = 1
 TEAM_NAMES = [file.path.split("/")[-1] for file in os.scandir(f"{CWD}/logs/") if file.is_dir()]
 TRIAL_NAMES = list(set([(file.path.split("/")[-1]).split("_")[0]  for file in os.scandir(f"{CWD}/logs/{TEAM_NAMES[0]}") if file.is_dir()]))
 TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
-ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
-for team_name in TEAM_NAMES: 
-    ALL_SCORES[team_name]["trial_scores"] = []
 
 AVERAGE_SENSOR_COST = 0
 COST_WEIGHT = 1
@@ -47,9 +45,13 @@ try:
 except getopt.error as err:
     print (str(err))
 
+ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
+for team_name in TEAM_NAMES: 
+    ALL_SCORES[team_name]["trial_scores"] = []
+
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
-        trial_nums = [int((file.path.split("/")[-1]).split("_")[-1]) for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path.split("/")[-1]]
+        trial_nums = sorted([int((file.path.split("/")[-1]).split("_")[-1]) for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path.split("/")[-1]])
         for i in range(1, NUM_ITERATIONS_PER_TRIAL+1):
             equal_lines = 0
             order_info = {}
@@ -126,6 +128,8 @@ for team_name in TEAM_NAMES:
             times = [ALL_SCORES[team_name][trial_name][i]["completion_time"] for i in range(NUM_ITERATIONS_PER_TRIAL)]
             ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][times.index(min(times))]
             ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(NUM_ITERATIONS_PER_TRIAL-(times.index(min(times))+1))]
+        print(trial_nums)
+        print(ALL_SCORES[team_name][trial_name]["best_trial"])
 total_sensor_cost = sum([ALL_SCORES[team_name]["sensor_cost"] for team_name in TEAM_NAMES])
 AVERAGE_SENSOR_COST = total_sensor_cost / len(TEAM_NAMES)
         
@@ -145,7 +149,7 @@ with open("ARIAC_RESULTS.csv",'w') as results_file:
             average_order_times.append(total_order_time / len(TEAM_NAMES))
         results_file.write("Trial_name: "+trial_name+"\n")
         for i in range(1,num_orders_in_trial+1):
-            results_file.write(",".join([f"Order{i+1} (id: {ALL_SCORES[TEAM_NAMES[0]][trial_name]['orders'][i]['order_id']}) average time: {average_order_times[i]}" for i in range(num_orders_in_trial)]))
+            results_file.write(",".join([f"Order {i+1} (id: {ALL_SCORES[TEAM_NAMES[0]][trial_name]['orders'][i]['order_id']}) average time: {average_order_times[i]}" for i in range(num_orders_in_trial)]))
         results_file.write('\n\nTeam name,')
         for i in range(1,len(ALL_SCORES[TEAM_NAMES[0]][trial_name]["orders"])+1):
             results_file.write(f"Order {i} id,Order {i} score,Order {i} submission duration,")
@@ -184,17 +188,15 @@ for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
         if not os.path.exists(HOME_DIR+f"/original_state_logs/{team_name}/{trial_name}"):
             os.system(f"mkdir -p {HOME_DIR}/original_state_logs/{team_name}/{trial_name}")
-        print(f"Waiting for {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log to exist...")
-        while not os.path.exists(f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log"):
-            pass
-        print("State.log found")
         os.system(f"mv {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
         print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
 commands = []
+subprocesses = []
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
-        commands.append(f"gz log -e -f {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log -z 100 --filter *.pose/*.pose > {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
+        commands.append(["./filter_state_log.sh", f"{HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log", f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log"])
+for command in commands:
+    subprocesses.append(subprocess.Popen(command))
 print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
-os.system(" & ".join(commands))
-os.system("wait")
+end_codes = [s.wait() for s in subprocesses]
 print(f"Saved state log" + ("" if len(commands)<=1 else "s"))
