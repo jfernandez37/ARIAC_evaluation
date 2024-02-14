@@ -1,15 +1,14 @@
 import os
 from copy import copy
-import customtkinter as ctk
-from tkinter import *
-from functools import partial
-import subprocess
+import sys
+import getopt
 
 CWD = os.getcwd()
 HOME_DIR = os.path.expanduser("~")
 NUM_ITERATIONS_PER_TRIAL = 1
 
-TEAM_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/competitor_configs") if ".yaml" in file]
+TEAM_NAMES = [file.path.split("/")[-1] for file in os.scandir(f"{CWD}/logs/") if file.is_dir()]
+TRIAL_NAMES = list(set([(file.path.split("/")[-1]).split("_")[0]  for file in os.scandir(f"{CWD}/logs/{TEAM_NAMES[0]}") if file.is_dir()]))
 TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
 ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
 for team_name in TEAM_NAMES: 
@@ -17,14 +16,45 @@ for team_name in TEAM_NAMES:
 
 AVERAGE_SENSOR_COST = 0
 COST_WEIGHT = 1
-TIME_WIEGHT = 1
+TIME_WEIGHT = 1
+FILTER = False
+
+arg_list = sys.argv[1:]
+options = "c:t:n:f:"
+long_options = ["cost_weight=", "time_weight=", "num_iter=", "filter="]
+try:
+    # Parsing argument
+    arguments, values = getopt.getopt(arg_list, options, long_options)
+     
+    # checking each argument
+    for currentArgument, currentValue in arguments:
+ 
+        if currentArgument in ("-c", "--cost_weight"):
+            COST_WEIGHT = float(currentValue)
+            print(f"Set cost weight to {COST_WEIGHT}")
+             
+        elif currentArgument in ("-t", "--time_weight"):
+            TIME_WEIGHT = float(currentValue)
+            print(f"Set time weight to {TIME_WEIGHT}")
+             
+        elif currentArgument in ("-n", "--num_iter"):
+            NUM_ITERATIONS_PER_TRIAL = int(float(currentValue))
+            print(f"Set num_iter to {NUM_ITERATIONS_PER_TRIAL}")
+        
+        elif currentArgument in ("-f", "--filter"):
+            FILTER = "f" not in currentValue.lower()
+            print(f"Filter set to {FILTER}")
+except getopt.error as err:
+    print (str(err))
 
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
+        trial_nums = [int((file.path.split("/")[-1]).split("_")[-1]) for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path.split("/")[-1]]
         for i in range(1, NUM_ITERATIONS_PER_TRIAL+1):
             equal_lines = 0
             order_info = {}
-            trial_log_file_path = CWD+f"/logs/{team_name}/{trial_name}_{i}/trial_log.txt"
+            trial_num = trial_nums[-1*i]
+            trial_log_file_path = CWD+f"/logs/{team_name}/{trial_name}_{trial_num}/trial_log.txt"
             if not os.path.isfile(trial_log_file_path):
                 continue
             with open(trial_log_file_path,"r") as file:
@@ -72,7 +102,7 @@ for team_name in TEAM_NAMES:
                         order_info[info[0]] = (info[1] if info[0]!="order_id" else info[1].upper())
                         if info[0] == "submission_duration":
                             ALL_SCORES[team_name][trial_name][i-1]["orders"].append(copy(order_info))
-            sensor_cost_file = CWD+f"/logs/{team_name}/{trial_name}_{i}/sensor_cost.txt"
+            sensor_cost_file = CWD+f"/logs/{team_name}/{trial_name}_{trial_num}/sensor_cost.txt"
             with open(sensor_cost_file,"r") as file:
                 for line in file:
                     if "Total sensor cost is: $" in line:
@@ -91,11 +121,11 @@ for team_name in TEAM_NAMES:
         maximum_order_sum = max(order_sums)
         if order_sums.count(maximum_order_sum)==1:
             ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][order_sums.index(maximum_order_sum)]
-            ALL_SCORES[team_name][trial_name]["best_trial"] = order_sums.index(maximum_order_sum)+1
+            ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(NUM_ITERATIONS_PER_TRIAL-(order_sums.index(maximum_order_sum)+1))]
         else:
             times = [ALL_SCORES[team_name][trial_name][i]["completion_time"] for i in range(NUM_ITERATIONS_PER_TRIAL)]
             ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][times.index(min(times))]
-            ALL_SCORES[team_name][trial_name]["best_trial"] = times.index(min(times))+1
+            ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(NUM_ITERATIONS_PER_TRIAL-(times.index(min(times))+1))]
 total_sensor_cost = sum([ALL_SCORES[team_name]["sensor_cost"] for team_name in TEAM_NAMES])
 AVERAGE_SENSOR_COST = total_sensor_cost / len(TEAM_NAMES)
         
@@ -128,7 +158,7 @@ with open("ARIAC_RESULTS.csv",'w') as results_file:
                 results_file.write(f"{ALL_SCORES[team_name][trial_name]['orders'][i]['order_id']},"+
                                 f"{ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']},"+
                                 f"{ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']},")
-                trial_score += (TIME_WIEGHT * average_order_times[i] / ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']) * ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']
+                trial_score += (TIME_WEIGHT * average_order_times[i] / ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']) * ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']
             trial_score *= COST_WEIGHT * AVERAGE_SENSOR_COST / ALL_SCORES[team_name]["sensor_cost"]
             ALL_SCORES[team_name]["trial_scores"].append(trial_score)
             results_file.write(f"{trial_score}")
@@ -145,3 +175,26 @@ with open("ARIAC_RESULTS.csv",'w') as results_file:
         results_file.write(f"{place},{team_score[0]},{team_score[1]}\n")
         place+=1
 print(f"Results saved in {CWD}/ARIAC_RESULTS.csv")
+
+if not FILTER:
+    quit()
+if not os.path.exists(HOME_DIR+"/original_state_logs"):
+    os.system(f"mkdir {HOME_DIR}/original_state_logs")
+for team_name in TEAM_NAMES:
+    for trial_name in TRIAL_NAMES:
+        if not os.path.exists(HOME_DIR+f"/original_state_logs/{team_name}/{trial_name}"):
+            os.system(f"mkdir -p {HOME_DIR}/original_state_logs/{team_name}/{trial_name}")
+        print(f"Waiting for {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log to exist...")
+        while not os.path.exists(f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log"):
+            pass
+        print("State.log found")
+        os.system(f"mv {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
+        print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
+commands = []
+for team_name in TEAM_NAMES:
+    for trial_name in TRIAL_NAMES:
+        commands.append(f"gz log -e -f {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log -z 100 --filter *.pose/*.pose > {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log")
+print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
+os.system(" & ".join(commands))
+os.system("wait")
+print(f"Saved state log" + ("" if len(commands)<=1 else "s"))
