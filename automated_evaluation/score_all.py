@@ -52,6 +52,9 @@ for team_name in TEAM_NAMES:
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
         trial_nums = sorted([int((file.path.split("/")[-1]).split("_")[-1]) for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path.split("/")[-1]])
+        if NUM_ITERATIONS_PER_TRIAL > len(trial_nums):
+            print(f"ERROR: NUM_ITERATIONS ({NUM_ITERATIONS_PER_TRIAL}) IS GREATER THAN THE NUMBER OF TRIALS RUN")
+            quit()
         for i in range(1, NUM_ITERATIONS_PER_TRIAL+1):
             equal_lines = 0
             order_info = {}
@@ -182,19 +185,15 @@ if not FILTER:
     quit()
 if not os.path.exists(HOME_DIR+"/original_state_logs"):
     os.system(f"mkdir {HOME_DIR}/original_state_logs")
-for team_name in TEAM_NAMES:
-    for trial_name in TRIAL_NAMES:
-        if not os.path.exists(HOME_DIR+f"/original_state_logs/{team_name}/{trial_name}"):
-            os.system(f"mkdir -p {HOME_DIR}/original_state_logs/{team_name}/{trial_name}")
-        os.system(f"mv {CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
-        print(f"Originial state.log moved to {HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log")
 commands = []
 subprocesses = []
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
-        commands.append(["./filter_state_log.sh", f"{HOME_DIR}/original_state_logs/{team_name}/{trial_name}/state.log", f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log"])
+        os.system(f"mkdir {CWD}/logs/{team_name}/best_{trial_name}")
+        commands.append(["./filter_state_log.sh", f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]["best_trial"]}/state.log", f"{CWD}/logs/{team_name}/best_{trial_name}/state.log"])
 for command in commands:
     subprocesses.append(subprocess.Popen(command))
 print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
 end_codes = [s.wait() for s in subprocesses]
-print(f"Saved state log" + ("" if len(commands)<=1 else "s"))
+print(f"Saved state log" + ("" if len(commands)<=1 else "s")+"\n\nTo view recordings of the best trial run for a team, run this command: ")
+print("./playback_trial {team_name} best_{trial_name}")
