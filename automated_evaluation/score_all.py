@@ -190,7 +190,7 @@ subprocesses = []
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
         os.system(f"mkdir {CWD}/logs/{team_name}/best_{trial_name}")
-        commands.append(["./filter_state_log.sh", f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]["best_trial"]}/state.log", f"{CWD}/logs/{team_name}/best_{trial_name}/state.log"])
+        commands.append(["./filter_state_log.sh", f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log", f"{CWD}/logs/{team_name}/best_{trial_name}/state.log"])
 for command in commands:
     subprocesses.append(subprocess.Popen(command))
 print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
