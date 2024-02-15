@@ -202,4 +202,4 @@ for command in commands:
 print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
 end_codes = [s.wait() for s in subprocesses]
 print(f"Saved state log" + ("" if len(commands)<=1 else "s")+"\n\nTo view recordings of the best trial run for a team, run this command: ")
-print("./playback_trial {team_name} best_{trial_name}")
+print("./playback_trial.sh {team_name} best_{trial_name}")
