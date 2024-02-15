@@ -9,7 +9,7 @@ HOME_DIR = os.path.expanduser("~")
 NUM_ITERATIONS_PER_TRIAL = 1
 
 TEAM_NAMES = [file.path.split("/")[-1] for file in os.scandir(f"{CWD}/logs/") if file.is_dir()]
-TRIAL_NAMES = list(set([(file.path.split("/")[-1]).split("_")[0]  for file in os.scandir(f"{CWD}/logs/{TEAM_NAMES[0]}") if file.is_dir() and "best" not in file.path.split("/")[-1]]))
+TRIAL_NAMES = list(set(["_".join((file.path.split("/")[-1]).split("_")[:-1])  for file in os.scandir(f"{CWD}/logs/{TEAM_NAMES[0]}") if file.is_dir() and "best" not in file.path.split("/")[-1]]))
 
 AVERAGE_SENSOR_COST = 0
 COST_WEIGHT = 1
