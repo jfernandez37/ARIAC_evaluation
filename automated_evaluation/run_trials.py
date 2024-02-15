@@ -90,12 +90,12 @@ if __name__ == "__main__":
     except:
         print("No Nvidia card detected")
 
-    trials_run = 0
+    num_trials_run = 0
     for team_name in TEAM_NAMES:
         os.system(f"./build_container.sh {team_name}" + (" nvidia" if nvidia_present else ""))
         for trial_name in TRIAL_NAMES:
             for _ in range(NUM_ITERATIONS_PER_TRIAL):
-                print("\n"*5 + f"Running trial. {trials_run} have been run already." + "\n"*5)
+                print("\n"*5 + f"Running trial. {num_trials_run} have been run already." + "\n"*5)
                 run_correctly = False
                 while not run_correctly:
                     os.system(f"./run_trial.sh {team_name} {trial_name} {1}")
@@ -110,7 +110,7 @@ if __name__ == "__main__":
                         os.system(f"rm -rf {CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}")
                     else:
                         run_correctly = True
-                trials_run+=1
+                num_trials_run+=1
         print("="*50)
         print("Completed all trials for team: "+team_name)
         print("="*50)
