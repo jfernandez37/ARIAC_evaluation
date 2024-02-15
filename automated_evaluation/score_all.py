@@ -123,21 +123,29 @@ for team_name in TEAM_NAMES:
                 pass
             
         maximum_order_sum = max(order_sums)
-        if order_sums.count(maximum_order_sum)==1:
+        if order_sums.count(maximum_order_sum)==1: # Runs if one run has a higher score than the others
             ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][order_sums.index(maximum_order_sum)]
             ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(NUM_ITERATIONS_PER_TRIAL-(order_sums.index(maximum_order_sum)+1))]
-        else:
-            times = [ALL_SCORES[team_name][trial_name][i]["completion_time"] for i in range(NUM_ITERATIONS_PER_TRIAL)]
+        else: # If multiple trials have the best score, the one saved is the lowest time
+            bad_inds = sorted([i for i in range(len(ALL_SCORES[team_name][trial_name])) if sum([d["actual_task_score"] for d in ALL_SCORES[team_name][trial_name][i]["orders"]])!=maximum_order_sum])[::-1]
+            temp_trial_nums = copy(trial_nums)
+            for i in bad_inds:
+                del ALL_SCORES[team_name][trial_name][i]
+                del trial_nums[trial_nums.index(temp_trial_nums[(-1*NUM_ITERATIONS_PER_TRIAL)+i])]
+            times = [ALL_SCORES[team_name][trial_name][i]["completion_time"] for i in range(len(ALL_SCORES[team_name][trial_name]))]
             ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][times.index(min(times))]
-            ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(NUM_ITERATIONS_PER_TRIAL-(times.index(min(times))+1))]
+            ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(len(ALL_SCORES[team_name][trial_name])-(times.index(min(times))+1))]
 total_sensor_cost = sum([ALL_SCORES[team_name]["sensor_cost"] for team_name in TEAM_NAMES])
 AVERAGE_SENSOR_COST = total_sensor_cost / len(TEAM_NAMES)
         
     
 with open("ARIAC_RESULTS.csv",'w') as results_file:
-    results_file.write("Average sensor cost: "+str(AVERAGE_SENSOR_COST)+"\n"*3)
+    results_file.write("Average sensor cost: $"+str(AVERAGE_SENSOR_COST)+"\n"*2)
+    results_file.write("Team,Sensor cost")
+    for team_name in TEAM_NAMES:
+        results_file.write(f"{team_name},${ALL_SCORES[team_name]['sensor_cost']}\n")
     
-    results_file.write("Order information:\n")
+    results_file.write("\n\nOrder information:\n")
     for trial_name in TRIAL_NAMES:
         num_orders_in_trial = 0
         average_order_times = []
