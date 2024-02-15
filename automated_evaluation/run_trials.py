@@ -97,8 +97,7 @@ if __name__ == "__main__":
                 run_correctly = False
                 while not run_correctly:
                     os.system(f"./run_trial.sh {team_name} {trial_name} {1}")
-                    trials_run = [file.path for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path]
-                    trials_run = [dir_name.split("/")[-1] for dir_name in trials_run]
+                    trials_run = [file.path.split("/")[-1] for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path and "best" not in file.path.split("/")[-1]]
                     most_recent_trial_num = sorted([int(trial.split("_")[-1]) for trial in trials_run])[-1]
                     while not os.path.exists(f"{CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}/trial_log.txt"):
                         pass

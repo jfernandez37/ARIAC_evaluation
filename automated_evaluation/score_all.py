@@ -9,8 +9,7 @@ HOME_DIR = os.path.expanduser("~")
 NUM_ITERATIONS_PER_TRIAL = 1
 
 TEAM_NAMES = [file.path.split("/")[-1] for file in os.scandir(f"{CWD}/logs/") if file.is_dir()]
-TRIAL_NAMES = list(set([(file.path.split("/")[-1]).split("_")[0]  for file in os.scandir(f"{CWD}/logs/{TEAM_NAMES[0]}") if file.is_dir()]))
-TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
+TRIAL_NAMES = list(set([(file.path.split("/")[-1]).split("_")[0]  for file in os.scandir(f"{CWD}/logs/{TEAM_NAMES[0]}") if file.is_dir() and "best" not in file.path.split("/")[-1]]))
 
 AVERAGE_SENSOR_COST = 0
 COST_WEIGHT = 1
@@ -51,7 +50,7 @@ for team_name in TEAM_NAMES:
 
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
-        trial_nums = sorted([int((file.path.split("/")[-1]).split("_")[-1]) for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path.split("/")[-1]])
+        trial_nums = sorted([int((file.path.split("/")[-1]).split("_")[-1]) for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path.split("/")[-1] and "best" not in file.path.split("/")[-1]])
         if NUM_ITERATIONS_PER_TRIAL > len(trial_nums):
             print(f"ERROR: NUM_ITERATIONS ({NUM_ITERATIONS_PER_TRIAL}) IS GREATER THAN THE NUMBER OF TRIALS RUN")
             quit()
@@ -183,13 +182,12 @@ print(f"Results saved in {CWD}/ARIAC_RESULTS.csv")
 
 if not FILTER:
     quit()
-if not os.path.exists(HOME_DIR+"/original_state_logs"):
-    os.system(f"mkdir {HOME_DIR}/original_state_logs")
 commands = []
 subprocesses = []
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
-        os.system(f"mkdir {CWD}/logs/{team_name}/best_{trial_name}")
+        if not os.path.exists(f"{CWD}/logs/{team_name}/best_{trial_name}"):
+            os.system(f"mkdir {CWD}/logs/{team_name}/best_{trial_name}")
         commands.append(["./filter_state_log.sh", f"{CWD}/logs/{team_name}/{trial_name}_{ALL_SCORES[team_name][trial_name]['best_trial']}/state.log", f"{CWD}/logs/{team_name}/best_{trial_name}/state.log"])
 for command in commands:
     subprocesses.append(subprocess.Popen(command))
