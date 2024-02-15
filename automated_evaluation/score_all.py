@@ -141,7 +141,7 @@ AVERAGE_SENSOR_COST = total_sensor_cost / len(TEAM_NAMES)
     
 with open("ARIAC_RESULTS.csv",'w') as results_file:
     results_file.write("Average sensor cost: $"+str(AVERAGE_SENSOR_COST)+"\n"*2)
-    results_file.write("Team,Sensor cost")
+    results_file.write("Team,Sensor cost\n")
     for team_name in TEAM_NAMES:
         results_file.write(f"{team_name},${ALL_SCORES[team_name]['sensor_cost']}\n")
     
