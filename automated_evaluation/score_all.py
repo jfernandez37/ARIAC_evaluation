@@ -47,7 +47,6 @@ except getopt.error as err:
 ALL_SCORES = {team_name : {trial : [{"orders":[]} for _ in range(NUM_ITERATIONS_PER_TRIAL)] for trial in TRIAL_NAMES} for team_name in TEAM_NAMES}
 for team_name in TEAM_NAMES: 
     ALL_SCORES[team_name]["trial_scores"] = []
-
 for team_name in TEAM_NAMES:
     for trial_name in TRIAL_NAMES:
         trial_nums = sorted([int((file.path.split("/")[-1]).split("_")[-1]) for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path.split("/")[-1] and "best" not in file.path.split("/")[-1]])
@@ -133,8 +132,9 @@ for team_name in TEAM_NAMES:
                 del ALL_SCORES[team_name][trial_name][i]
                 del trial_nums[trial_nums.index(temp_trial_nums[(-1*NUM_ITERATIONS_PER_TRIAL)+i])]
             times = [ALL_SCORES[team_name][trial_name][i]["completion_time"] for i in range(len(ALL_SCORES[team_name][trial_name]))]
+            best_trial_ind = trial_nums[-1-(len(ALL_SCORES[team_name][trial_name])-(times.index(min(times))+1))]
             ALL_SCORES[team_name][trial_name] = ALL_SCORES[team_name][trial_name][times.index(min(times))]
-            ALL_SCORES[team_name][trial_name]["best_trial"] = trial_nums[-1-(len(ALL_SCORES[team_name][trial_name])-(times.index(min(times))+1))]
+            ALL_SCORES[team_name][trial_name]["best_trial"] = best_trial_ind
 total_sensor_cost = sum([ALL_SCORES[team_name]["sensor_cost"] for team_name in TEAM_NAMES])
 AVERAGE_SENSOR_COST = total_sensor_cost / len(TEAM_NAMES)
         
@@ -152,12 +152,19 @@ with open("ARIAC_RESULTS.csv",'w') as results_file:
         for i in range(len(ALL_SCORES[TEAM_NAMES[0]][trial_name]["orders"])):
             num_orders_in_trial+=1
             total_order_time = 0
+            invalid_teams = 0
             for team_name in TEAM_NAMES:
-                total_order_time+=ALL_SCORES[team_name][trial_name]["orders"][i]["submission_duration"]
-            average_order_times.append(total_order_time / len(TEAM_NAMES))
+                try:
+                    total_order_time+=ALL_SCORES[team_name][trial_name]["orders"][i]["submission_duration"]
+                except:
+                    invalid_teams+=1
+                    total_order_time+=0
+            try:
+                average_order_times.append(total_order_time / (len(TEAM_NAMES)-invalid_teams))
+            except:
+                average_order_times.append(10000)
         results_file.write("Trial_name: "+trial_name+"\n")
-        for i in range(1,num_orders_in_trial+1):
-            results_file.write(",".join([f"Order {i+1} (id: {ALL_SCORES[TEAM_NAMES[0]][trial_name]['orders'][i]['order_id']}) average time: {average_order_times[i]}" for i in range(num_orders_in_trial)]))
+        results_file.write(",".join([f"Order {i+1} (id: {ALL_SCORES[TEAM_NAMES[0]][trial_name]['orders'][i]['order_id']}) average time: {average_order_times[i]}" for i in range(num_orders_in_trial)]))
         results_file.write('\n\nTeam name,')
         for i in range(1,len(ALL_SCORES[TEAM_NAMES[0]][trial_name]["orders"])+1):
             results_file.write(f"Order {i} id,Order {i} score,Order {i} submission duration,")
@@ -170,7 +177,10 @@ with open("ARIAC_RESULTS.csv",'w') as results_file:
                 results_file.write(f"{ALL_SCORES[team_name][trial_name]['orders'][i]['order_id']},"+
                                 f"{ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']},"+
                                 f"{ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']},")
-                trial_score += (TIME_WEIGHT * average_order_times[i] / ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']) * ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']
+                try:
+                    trial_score += (TIME_WEIGHT * average_order_times[i] / ALL_SCORES[team_name][trial_name]['orders'][i]['submission_duration']) * ALL_SCORES[team_name][trial_name]['orders'][i]['actual_task_score']
+                except:
+                    trial_score += 0        
             trial_score *= COST_WEIGHT * AVERAGE_SENSOR_COST / ALL_SCORES[team_name]["sensor_cost"]
             ALL_SCORES[team_name]["trial_scores"].append(trial_score)
             results_file.write(f"{trial_score}")
