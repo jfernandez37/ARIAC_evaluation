@@ -89,7 +89,7 @@ def main():
             break
         try:
             output = subprocess.check_output(
-                "gz topic -l", shell=True).decode("utf-8")
+                "gz topic -l", shell=True, timeout=5).decode("utf-8")
 
             if output == '' or output.count('An instance of Gazebo is not running') > 0:
                 print('Gazebo not running')
