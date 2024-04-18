@@ -48,15 +48,28 @@ def main():
 
     trial_name = sys.argv[2]
 
-    process = Popen(["ros2", "launch", package_name, launch_file, f"trial_name:={trial_name}", '--noninteractive'])
-
+    process = Popen(["./run_trial_with_output.sh", package_name, launch_file, f"trial_name:={trial_name}", '--noninteractive',"2>&1 | tee test.txt"])
     # Continue execution of trial until log file is generated
     time.sleep(10)
 
     files = glob.glob(os.path.expanduser("/workspace/src/ARIAC/ariac_log/*"))
     current_log_path = sorted(files, key=lambda t: -os.stat(t).st_mtime)[0]
-
+    
+    while not os.path.exists(os.getcwd()+"/test.txt"):
+        time.sleep(1)
+    error_found = False
     while True:
+        output_file = open("test.txt","r")
+        for line in (output_file.readlines() [-10:]):
+            if "google::protobuf::FatalException" in line:
+                error_found = True
+                create_score_cmd = "echo 'Gazebo Crashed score not recorded' > /tmp/trial_log.txt"
+                subprocess.run(create_score_cmd, shell=True)
+                shutil.copy(
+                    f'{current_log_path}/sensor_cost.txt', '/tmp/sensor_cost.txt')
+                break
+        if error_found:
+            break
         if os.path.exists(f'{current_log_path}/trial_log.txt'):
             if os.path.exists('/tmp/trial_log.txt'):
                 os.remove('/tmp/trial_log.txt')
@@ -89,7 +102,6 @@ def main():
             pass
 
     print(f"==== Trial {trial_name} completed")
-
     # process.send_signal(SIGTERM)
     process.kill()
     # Might raise a TimeoutExpired if it takes too long
