@@ -60,7 +60,8 @@ def main():
 
     files = glob.glob(os.path.expanduser("/workspace/src/ARIAC/ariac_log/*"))
     current_log_path = sorted(files, key=lambda t: -os.stat(t).st_mtime)[0]
-
+    
+    gazebo_error = False
     while True:
         if os.path.exists(f'{current_log_path}/trial_log.txt'):
             if os.path.exists('/tmp/trial_log.txt'):
@@ -81,17 +82,20 @@ def main():
             break
         try:
             output = subprocess.check_output(
-                "gz topic -l", shell=True).decode("utf-8")
+                "gz topic -l", shell=True, timeout=5).decode("utf-8")
 
             if output == '' or output.count('An instance of Gazebo is not running') > 0:
-                print('Gazebo not running')
-                create_score_cmd = "echo 'Gazebo Crashed score not recorded' > /tmp/trial_log.txt"
-                subprocess.run(create_score_cmd, shell=True)
-                shutil.copy(
-                    f'{current_log_path}/sensor_cost.txt', '/tmp/sensor_cost.txt')
-                break
+                gazebo_error = True
         except subprocess.CalledProcessError:
-            pass
+            gazebo_error = True
+        
+        if gazebo_error:
+            print('Gazebo not running')
+            create_score_cmd = "echo 'Gazebo Crashed score not recorded' > /tmp/trial_log.txt"
+            subprocess.run(create_score_cmd, shell=True)
+            shutil.copy(
+                f'{current_log_path}/sensor_cost.txt', '/tmp/sensor_cost.txt')
+            break
 
     print(f"==== Trial {trial_name} completed")
 
