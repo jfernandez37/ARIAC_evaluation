@@ -148,7 +148,7 @@ def get_best_run(team: str, trial: str) -> str:
         
         # Check if the current folder matches the trial
         if folder_name[:-suffix_length] == trial:
-            log_file = os.path.join(folder_name, "trial_log.txt")
+            log_file = os.path.join(log_folder, "trial_log.txt")
             
             if not os.path.exists(log_file):
                 print(f'Log file {log_file} does not exist')
@@ -156,7 +156,7 @@ def get_best_run(team: str, trial: str) -> str:
             
             raw_score = get_trial_raw_score(log_file)
             duration_time = get_trial_completion_time(log_file)
-            trial_scores.append((folder_name, raw_score, duration_time))
+            trial_scores.append((log_folder.path, raw_score, duration_time))
     
     # Sort trial first by raw_score, then by completion time
     trial_scores_sorted = sorted(trial_scores, key=lambda x:(-x[1], x[2]))
