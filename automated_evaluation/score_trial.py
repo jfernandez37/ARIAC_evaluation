@@ -32,14 +32,14 @@ def get_order_information(trial: str) -> list[OrderInfo]:
         list[OrderInfo]: list of information about each order in the given trial
     """
     
-    trial_config = os.path.join(os.getcwd(), 'trials', trial_name + '.yaml')
+    trial_config = os.path.join(os.getcwd(), 'trials', trial + '.yaml')
     
     if not os.path.exists(trial_config):
         print(f'Trial config: {trial_config} not found')
         return []
         
     try:
-        with open(f"{os.getcwd()}/trials/{trial_name}.yaml") as f:
+        with open(trial_config) as f:
             trial_info = yaml.safe_load(f)
     except (IOError, yaml.YAMLError):
         print(f'Unable to parse trial config: {trial_config}')
