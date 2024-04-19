@@ -62,7 +62,8 @@ def get_team_names():
         
 def get_best_trial(team_name, trial_name):
     all_trials = os.scandir(f"{os.getcwd()}/logs/{team_name}")
-    trial_folder_names = [f for f in all_trials if os.path.basename(f)[:-2] == trial_name]
+    trial_folder_names = [f.path for f in all_trials if "".join(((f.path).split("/")[-1]).split("_")[:-1])==trial_name]
+    print(trial_folder_names)
     
     trial_scores = []
     for folder in trial_folder_names:
@@ -85,18 +86,22 @@ def create_order_submissions(trial_file):
         start = [("Order Summary" in line) for line in lines].index(True) + 2
         end = [("Order Details" in line) for line in lines].index(True) - 2
         summary = lines[start:end]
+        for i in range(len(summary)):
+            for c in ["\t","\n"]:
+                while c in summary[i]:
+                    summary[i] = summary[i].replace(c,"")
+        print(summary)
         for i in range(len(summary)//8):
-            order_id = summary[i*8].split(": ")[-1]
-            submitted = summary[i*8+1].split(": ") == "yes"
-            priority = summary[i*8 + 2].split(": ") == "yes"
+            order_id = (summary[i*8].split(": ")[-1])
+            submitted = summary[i*8+2].split(": ")[-1] == "yes"
+            priority = summary[i*8 + 3].split(": ")[-1] == "yes"
             time_to_complete = float(summary[i*8+7].split(": ")[-1]) if summary[i*8+7].split(": ") != "N/A" else None
             score = int(summary[i*8 + 5].split(":")[-1])
-        print(summary)
-        order_submissions.append(OrderSubmission(order_id, submitted, priority, time_to_complete, score))
+            order_submissions.append(OrderSubmission(order_id, submitted, priority, time_to_complete, score))
     return order_submissions
 
 def get_sensor_cost(team_name, trial_name):
-    with open(f"{os.getcwd()}/logs/{team_name}/{trial_name}_2/sensor_cost.txt") as file:
+    with open(f"{os.getcwd()}/logs/{team_name}/{trial_name}_1/sensor_cost.txt") as file:
         lines = file.readlines()
     return int(lines[15].split("$")[-1])
         
@@ -118,10 +123,10 @@ def main(args):
         submission_durations = []
         scores = []
         for team in team_names:
-            print(id)
             order_submission = [s for s in submissions[team].orders if s.order_id == id][0]
             order_submission : OrderSubmission
             if order_submission.submitted:
+                print("TEST")
                 submission_durations.append(order_submission.time_to_complete)
                 scores.append(order_submission.score)
         combined_team_scores[id] = CombinedTeamScores(submission_durations, scores)
