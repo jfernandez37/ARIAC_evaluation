@@ -178,7 +178,7 @@ if __name__ == "__main__":
         update_trials = (setup_gui.update_trials if not rebuild_containers else False)
     
     # Move existing log files
-    if len(os.listdir(os.path.join(os.getcwd(),"logs")))>0:
+    if os.path.exists(os.path.join(os.getcwd(), "logs")) and len(os.listdir(os.path.join(os.getcwd(),"logs")))>0:
         num = 1
         if not os.path.exists(os.path.join(os.getcwd(),"old_logs")):
             os.mkdir(os.path.join(os.getcwd(),"old_logs"))
