@@ -11,9 +11,6 @@ from docker.models.containers import Container as DockerContainer
 from typing import Optional
 import shutil
 
-team_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/competitor_configs") if ".yaml" in file]
-trial_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/trials") if ".yaml" in file]
-
 # def get_all_containers(client: docker.DockerClient) -> :
 #     containersReturn = []
 #     containers: list[DockerContainer] = client.containers.list(all=True)
@@ -61,8 +58,8 @@ class Options_GUI(ctk.CTk):
         except:
             print("No Nvidia card detected")
 
-        team_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/competitor_configs") if ".yaml" in file]
-        trial_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/trials") if ".yaml" in file]
+        self.team_names = sorted([file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/competitor_configs") if ".yaml" in file])
+        self.trial_names = sorted([file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/trials") if ".yaml" in file])
             
         self.left_column, self.middle_column, self.right_column = 1,2,3
         self.grid_rowconfigure(0, weight=1)
@@ -70,8 +67,8 @@ class Options_GUI(ctk.CTk):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(4, weight=1)
 
-        self.team_vars = [ctk.StringVar() for _ in range(len(team_names))]
-        self.trial_vars = [ctk.StringVar() for _ in range(len(trial_names))]
+        self.team_vars = [ctk.StringVar() for _ in range(len(self.team_names))]
+        self.trial_vars = [ctk.StringVar() for _ in range(len(self.trial_names))]
         for a in [self.team_vars, self.trial_vars]:
             for v in a:
                 v.set("0")
@@ -95,13 +92,13 @@ class Options_GUI(ctk.CTk):
         self.update_trials = False
 
         for i in range(len(self.team_vars)):
-            cb = ctk.CTkCheckBox(self, text=team_names[i], variable=self.team_vars[i], onvalue="1", offvalue="0", height=1, width=20)
+            cb = ctk.CTkCheckBox(self, text=self.team_names[i], variable=self.team_vars[i], onvalue="1", offvalue="0", height=1, width=20)
             cb.grid(column = self.left_column, row = i+1, sticky=NW, padx = 25)
         select_all_teams_button = ctk.CTkButton(self, text="Select all teams", command=partial(self.select_all, self.team_vars))
         select_all_teams_button.grid(column = self.left_column, row = len(self.team_vars)+1)
 
         for i in range(len(self.trial_vars)):
-            cb = ctk.CTkCheckBox(self, text=trial_names[i], variable=self.trial_vars[i], onvalue="1", offvalue="0", height=1, width=20)
+            cb = ctk.CTkCheckBox(self, text=self.trial_names[i], variable=self.trial_vars[i], onvalue="1", offvalue="0", height=1, width=20)
             cb.grid(column = self.right_column, row = i+1, sticky=NW, padx = 25)
         select_all_trials_button = ctk.CTkButton(self, text="Select all trials", command=partial(self.select_all, self.trial_vars))
         select_all_trials_button.grid(column = self.right_column, row = len(self.trial_vars)+1)
@@ -151,8 +148,10 @@ class Options_GUI(ctk.CTk):
             v.set("1")
     
     def save_selections(self):
-        self.team_selections = [team_names[i] for i in range(len(team_names)) if self.team_vars[i].get()=="1"]
-        self.trial_selections = [trial_names[i] for i in range(len(trial_names)) if self.trial_vars[i].get()=="1"]
+        temp_team_selections = [self.team_names[i] for i in range(len(self.team_names)) if self.team_vars[i].get()=="1"]
+        self.team_selections = [name for name in self.team_names if name in temp_team_selections]
+        temp_trials_selected = [self.trial_names[i] for i in range(len(self.trial_names)) if self.trial_vars[i].get()=="1"]
+        self.trial_selections = [name for name in self.trial_names if name in temp_trials_selected]
         self.num_iter_selection = self.num_iter_var.get()
         self.max_iter_selection = self.max_iter_var.get()
         self.use_nvidia = self.use_nvidia_var.get()=="1"
@@ -171,6 +170,7 @@ if __name__ == "__main__":
     else:
         team_names = setup_gui.team_selections
         trial_names = setup_gui.trial_selections
+        print(trial_names)
         num_iter_per_trial = setup_gui.num_iter_selection
         max_iter_per_trial = setup_gui.max_iter_selection
         use_nvidia = setup_gui.use_nvidia
