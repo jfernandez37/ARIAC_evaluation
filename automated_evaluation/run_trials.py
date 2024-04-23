@@ -6,21 +6,48 @@ from functools import partial
 import subprocess
 from time import sleep
 import docker
+import docker.models
+from docker.models.containers import Container as DockerContainer
+from typing import Optional
+import shutil
 
-CWD = os.getcwd()
-HOME_DIR = os.path.expanduser("~")
-NUM_ITERATIONS_PER_TRIAL = 1
+team_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/competitor_configs") if ".yaml" in file]
+trial_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/trials") if ".yaml" in file]
 
-TEAM_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/competitor_configs") if ".yaml" in file]
-TRIAL_NAMES = [file.replace(".yaml","") for file in os.listdir(CWD+"/trials") if ".yaml" in file]
+# def get_all_containers(client: docker.DockerClient) -> :
+#     containersReturn = []
+#     containers: list[DockerContainer] = client.containers.list(all=True)
+#     for container in containers:
+#         containersReturn.append(container.name)
+#     return containersReturn
 
-def getContainers():
-    dockerClient = docker.DockerClient()
-    containersReturn = []
-    containers = dockerClient.containers.list(all=True)
-    for container in containers:
-        containersReturn.append(container.name)
-    return containersReturn
+def trial_succeeded(trial_log: str) -> bool:   
+    if os.path.exists(trial_log):
+        with open(trial_log, "r") as file:
+            if len(file.readlines()) > 1:
+                return True
+            else:
+                return False
+    
+    print("Unable to find most log file for most recent run")
+    return False
+
+def get_most_recent_trial_log(team_name: str, trial_name: str) -> str:
+    most_recent_trial_folder = get_most_recent_trial_folder(team_name, trial_name)
+    
+    trial_log = os.path.join(most_recent_trial_folder, "trial_log.txt")
+    
+    return trial_log
+
+def get_most_recent_trial_folder(team_name: str, trial_name: str):
+    folders = [file.path for file in os.scandir(os.path.join(os.getcwd(), "logs", team_name))]
+    
+    trial_folders = filter(lambda x: trial_name in x, folders)
+    
+    return sorted(trial_folders, key=lambda x: int(x.split("_")[-1]))[-1]
+
+def delete_most_recent_trial_folder(team_name: str, trial_name: str):
+    os.system(f"rm -rf {get_most_recent_trial_folder(team_name, trial_name)}")
 
 class Options_GUI(ctk.CTk):
     def __init__(self):
@@ -34,6 +61,8 @@ class Options_GUI(ctk.CTk):
         except:
             print("No Nvidia card detected")
 
+        team_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/competitor_configs") if ".yaml" in file]
+        trial_names = [file.replace(".yaml","") for file in os.listdir(os.getcwd()+"/trials") if ".yaml" in file]
             
         self.left_column, self.middle_column, self.right_column = 1,2,3
         self.grid_rowconfigure(0, weight=1)
@@ -41,8 +70,8 @@ class Options_GUI(ctk.CTk):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(4, weight=1)
 
-        self.team_vars = [ctk.StringVar() for _ in range(len(TEAM_NAMES))]
-        self.trial_vars = [ctk.StringVar() for _ in range(len(TRIAL_NAMES))]
+        self.team_vars = [ctk.StringVar() for _ in range(len(team_names))]
+        self.trial_vars = [ctk.StringVar() for _ in range(len(trial_names))]
         for a in [self.team_vars, self.trial_vars]:
             for v in a:
                 v.set("0")
@@ -66,13 +95,13 @@ class Options_GUI(ctk.CTk):
         self.update_trials = False
 
         for i in range(len(self.team_vars)):
-            cb = ctk.CTkCheckBox(self, text=TEAM_NAMES[i], variable=self.team_vars[i], onvalue="1", offvalue="0", height=1, width=20)
+            cb = ctk.CTkCheckBox(self, text=team_names[i], variable=self.team_vars[i], onvalue="1", offvalue="0", height=1, width=20)
             cb.grid(column = self.left_column, row = i+1, sticky=NW, padx = 25)
         select_all_teams_button = ctk.CTkButton(self, text="Select all teams", command=partial(self.select_all, self.team_vars))
         select_all_teams_button.grid(column = self.left_column, row = len(self.team_vars)+1)
 
         for i in range(len(self.trial_vars)):
-            cb = ctk.CTkCheckBox(self, text=TRIAL_NAMES[i], variable=self.trial_vars[i], onvalue="1", offvalue="0", height=1, width=20)
+            cb = ctk.CTkCheckBox(self, text=trial_names[i], variable=self.trial_vars[i], onvalue="1", offvalue="0", height=1, width=20)
             cb.grid(column = self.right_column, row = i+1, sticky=NW, padx = 25)
         select_all_trials_button = ctk.CTkButton(self, text="Select all trials", command=partial(self.select_all, self.trial_vars))
         select_all_trials_button.grid(column = self.right_column, row = len(self.trial_vars)+1)
@@ -122,8 +151,8 @@ class Options_GUI(ctk.CTk):
             v.set("1")
     
     def save_selections(self):
-        self.team_selections = [TEAM_NAMES[i] for i in range(len(TEAM_NAMES)) if self.team_vars[i].get()=="1"]
-        self.trial_selections = [TRIAL_NAMES[i] for i in range(len(TRIAL_NAMES)) if self.trial_vars[i].get()=="1"]
+        self.team_selections = [team_names[i] for i in range(len(team_names)) if self.team_vars[i].get()=="1"]
+        self.trial_selections = [trial_names[i] for i in range(len(trial_names)) if self.trial_vars[i].get()=="1"]
         self.num_iter_selection = self.num_iter_var.get()
         self.max_iter_selection = self.max_iter_var.get()
         self.use_nvidia = self.use_nvidia_var.get()=="1"
@@ -132,65 +161,116 @@ class Options_GUI(ctk.CTk):
         self.destroy()
 
 if __name__ == "__main__":
+    # Get options from GUI
     setup_gui = Options_GUI()
     setup_gui.mainloop()
+
     if 0 in [len(setup_gui.team_selections),len(setup_gui.trial_selections), setup_gui.num_iter_selection]:
         print("Exited out of GUI. Not running any trials.")
         quit()
     else:
-        TEAM_NAMES = setup_gui.team_selections
-        TRIAL_NAMES = setup_gui.trial_selections
-        NUM_ITERATIONS_PER_TRIAL = setup_gui.num_iter_selection
-        MAX_ITERATIONS_PER_TRIAL = setup_gui.max_iter_selection
-        USE_NVIDIA = setup_gui.use_nvidia
-        REBUILD_CONTAINERS = setup_gui.rebuild_containers
-        UPDATE_TRIALS = (setup_gui.update_trials if not REBUILD_CONTAINERS else False)
+        team_names = setup_gui.team_selections
+        trial_names = setup_gui.trial_selections
+        num_iter_per_trial = setup_gui.num_iter_selection
+        max_iter_per_trial = setup_gui.max_iter_selection
+        use_nvidia = setup_gui.use_nvidia
+        rebuild_containers = setup_gui.rebuild_containers
+        update_trials = (setup_gui.update_trials if not rebuild_containers else False)
     
-
-    num_trials_run = 0
-    for team_name in TEAM_NAMES:
-        current_containers = getContainers()
-        
-        if REBUILD_CONTAINERS:
-            if team_name in current_containers:
-                os.system(f"docker container rm {team_name} --force")
-                os.system(f"./build_container.sh {team_name}" + (" nvidia" if USE_NVIDIA else ""))
-            else:
-                print(f"{team_name} not found in existing docker containers. Building new container...")
-                
-        if team_name not in current_containers:
-            os.system(f"./build_container.sh {team_name}" + (" nvidia" if USE_NVIDIA else ""))
+    # Move existing log files
+    if len(os.listdir(os.path.join(os.getcwd(),"logs")))>0:
+        num = 1
+        if not os.path.exists(os.path.join(os.getcwd(),"old_logs")):
+            os.mkdir(os.path.join(os.getcwd(),"old_logs"))
+            os.mkdir(os.path.join(os.getcwd(),"old_logs", "competition_run_1"))
         else:
-            os.system(f"docker start {team_name}")
+            used_nums = []
+            for folder in os.listdir(os.path.join(os.getcwd(),"old_logs")):
+                if "competition_run_" in folder:
+                    used_nums.append(int(folder.split("_")[-1]))
+            os.mkdir(os.path.join(os.getcwd(),"old_logs", f"competition_run_{max(used_nums)+1}"))
+            num = max(used_nums)+1
+        shutil.move(f"{os.getcwd()}/logs", f"{os.getcwd()}/old_logs/competition_run_{num}")    
+        
+    # Build/Rebuild all containers
+    docker_client = docker.DockerClient()
+    all_containers: list[DockerContainer] = docker_client.containers.list(all=True)
+    
+    team_containers: dict[str, Optional[DockerContainer]]  = {team : None for team in team_names}
+    for team in team_names:
+        for container in all_containers:
+            if container.name == team:
+                team_containers[team] = container
+                break
             
-        if UPDATE_TRIALS:
-            os.system(f"./update_trials.sh {team_name}")
+    if rebuild_containers:
+        for team in team_names:
+            # Remove existing containers
+            if team_containers[team] is not None:
+                container.remove(force=True)
             
-        for trial_name in TRIAL_NAMES:
-            trial_count = 0
-            for _ in range(NUM_ITERATIONS_PER_TRIAL):
-                print("\n"*5 + f"Running trial. {num_trials_run} have been run already." + "\n"*5)
-                run_correctly = False
-                while not run_correctly:
-                    os.system(f"docker start {team_name}")
-                    print("test")
-                    os.system(f"./run_trial.sh {team_name} {trial_name} {1}")
-                    trial_count+=1
-                    trials_run = [file.path.split("/")[-1] for file in os.scandir(f"{CWD}/logs/{team_name}") if file.is_dir() and trial_name in file.path and "best" not in file.path.split("/")[-1]]
-                    most_recent_trial_num = sorted([int(trial.split("_")[-1]) for trial in trials_run])[-1]
-                    while not os.path.exists(f"{CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}/trial_log.txt"):
-                        sleep(1)
-                    with open(f"{CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}/trial_log.txt",'r') as file:
-                        num_lines = len(file.readlines())
-                    if num_lines==1:
-                        print("Trial did not run correctly. Trying again")
-                        os.system(f"rm -rf {CWD}/logs/{team_name}/{trial_name}_{most_recent_trial_num}")
+            # Build new container
+            build_command = ["./build_container.sh", team,]
+            if use_nvidia:
+                build_command.append("nvidia")
+            process = subprocess.run(build_command)
+            
+            all_containers = docker_client.containers.list(all=True)
+            
+            try:
+                team_containers[team] = [c for c in all_containers if c.name == team][0]
+            except IndexError:
+                team_containers[team] = None
+                print("Unable to rebuild container for team", team)
+            
+    # Update trials
+    if update_trials:
+        for team in team_names:
+            if not team_containers[team] is None:
+                process = subprocess.run(["./update_trials.sh",team])
+
+    # Stop all containers
+    for container in team_containers.values():
+        print("Stopping container",container.name)
+        container.stop()
+    
+    # Run trials
+    for team_name, container in team_containers.items():
+        for trial_name in trial_names:
+            trial_runs = 0
+            completed_runs = 0
+            
+            while completed_runs < num_iter_per_trial:
+                print("Restarting container",team_name)
+                container.restart()
+                
+                # Start trial
+                print(f"On trial {trial_runs} of {max_iter_per_trial}")
+                print(f"Completed runs: {completed_runs} out of {num_iter_per_trial}")
+                run_command = ["./run_trial.sh", team_name, trial_name]
+                p = subprocess.Popen(run_command)
+                p.wait()
+                
+                sleep(2)
+                
+                most_recent_trial_log = get_most_recent_trial_log(team_name, trial_name)
+                if os.path.exists(most_recent_trial_log):
+                    if trial_succeeded(most_recent_trial_log):
+                        completed_runs+=1
                     else:
-                        run_correctly = True
-                    os.system(f"docker stop {team_name}")
-                num_trials_run+=1
-                if trial_count >= MAX_ITERATIONS_PER_TRIAL:
-                    continue
+                        print("Trial did not run correctly. Trying again")
+                        delete_most_recent_trial_folder(team_name, trial_name)
+                else:
+                    print("Unable to find log file. Running again")
+                    delete_most_recent_trial_folder(team_name, trial_name)
+                
+                trial_runs+=1
+                
+                if trial_runs >= max_iter_per_trial:
+                    break
+        
+        container.stop()
+                
         print("="*50)
         print("Completed all trials for team: "+team_name)
         print("="*50)
