@@ -62,40 +62,45 @@ def main():
     current_log_path = sorted(files, key=lambda t: -os.stat(t).st_mtime)[0]
     
     gazebo_error = False
-    while True:
-        if os.path.exists(f'{current_log_path}/trial_log.txt'):
-            if os.path.exists('/tmp/trial_log.txt'):
-                os.remove('/tmp/trial_log.txt')
-            if os.path.exists('/tmp/sensor_cost.txt'):
-                os.remove('/tmp/sensor_cost.txt')
-            if os.path.exists('/tmp/state.log'):
-                os.remove('/tmp/state.log')
-            shutil.copy(
-                f'{current_log_path}/trial_log.txt', '/tmp/trial_log.txt')
-            shutil.copy(
-                f'{current_log_path}/sensor_cost.txt', '/tmp/sensor_cost.txt')
-            state_log_files = glob.glob(os.path.expanduser("/root/.gazebo/log/*"))
-            current_gazebo_log_path = sorted(state_log_files, key=lambda t: -os.stat(t).st_mtime)[0]
-            if os.path.exists(current_gazebo_log_path + '/gzserver/state.log'):
+    try:
+        while True:
+            if os.path.exists(f'{current_log_path}/trial_log.txt'):
+                if os.path.exists('/tmp/trial_log.txt'):
+                    os.remove('/tmp/trial_log.txt')
+                if os.path.exists('/tmp/sensor_cost.txt'):
+                    os.remove('/tmp/sensor_cost.txt')
+                if os.path.exists('/tmp/state.log'):
+                    os.remove('/tmp/state.log')
                 shutil.copy(
-                f'{current_gazebo_log_path}/gzserver/state.log', '/tmp/state.log')
-            break
-        try:
-            output = subprocess.check_output(
-                "gz topic -l", shell=True, timeout=5).decode("utf-8")
+                    f'{current_log_path}/trial_log.txt', '/tmp/trial_log.txt')
+                shutil.copy(
+                    f'{current_log_path}/sensor_cost.txt', '/tmp/sensor_cost.txt')
+                state_log_files = glob.glob(os.path.expanduser("/root/.gazebo/log/*"))
+                current_gazebo_log_path = sorted(state_log_files, key=lambda t: -os.stat(t).st_mtime)[0]
+                if os.path.exists(current_gazebo_log_path + '/gzserver/state.log'):
+                    shutil.copy(
+                    f'{current_gazebo_log_path}/gzserver/state.log', '/tmp/state.log')
+                break
+            try:
+                output = subprocess.check_output(
+                    "gz topic -l", shell=True, timeout=5).decode("utf-8")
 
-            if output == '' or output.count('An instance of Gazebo is not running') > 0:
+                if output == '' or output.count('An instance of Gazebo is not running') > 0:
+                    gazebo_error = True
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
                 gazebo_error = True
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            gazebo_error = True
-        
-        if gazebo_error:
-            print('Gazebo not running')
-            create_score_cmd = "echo 'Gazebo Crashed score not recorded' > /tmp/trial_log.txt"
-            subprocess.run(create_score_cmd, shell=True)
-            shutil.copy(
-                f'{current_log_path}/sensor_cost.txt', '/tmp/sensor_cost.txt')
-            break
+            
+            if gazebo_error:
+                print('Gazebo not running')
+                create_score_cmd = "echo 'Gazebo Crashed score not recorded' > /tmp/trial_log.txt"
+                subprocess.run(create_score_cmd, shell=True)
+                shutil.copy(
+                    f'{current_log_path}/sensor_cost.txt', '/tmp/sensor_cost.txt')
+                break
+    except KeyboardInterrupt:
+        if not os.path.exists(f'{current_log_path}/trial_log.txt'):
+            with open("/tmp/trial_log.txt", "w") as file:
+                file.write("Process cancelled by user")
 
     print(f"==== Trial {trial_name} completed")
 
