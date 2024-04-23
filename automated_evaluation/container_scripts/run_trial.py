@@ -86,7 +86,7 @@ def main():
 
             if output == '' or output.count('An instance of Gazebo is not running') > 0:
                 gazebo_error = True
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             gazebo_error = True
         
         if gazebo_error:
