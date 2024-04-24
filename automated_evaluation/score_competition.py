@@ -20,7 +20,7 @@ def get_trial_names() -> list[str]:
     for file in os.scandir(os.path.join(os.getcwd(),"logs",get_team_names()[0])):
         if file.is_dir():
             trial_names.append("_".join(os.path.basename(file).split("_")[:-1]))
-    return list(set(sorted(trial_names)))
+    return sorted(list(set(trial_names)))
 
 def get_total_scores(team_names: list[str],trial_names: list[str])->dict[str,float]:
     final_scores_by_team = {team : 0 for team in team_names}
@@ -57,19 +57,55 @@ def main():
                 file.write(team+",")
                 line = []
                 for order_id in order_ids:
-                    line.append(str(trial_info.team_submissions[team].order_submissions[order_id].score))
-                    line.append(str(trial_info.team_submissions[team].order_submissions[order_id].completion_duration))
+                    try:
+                        line.append(str(trial_info.team_submissions[team].order_submissions[order_id].score))
+                    except:
+                        line.append("0")
+                    try:
+                        line.append(str(trial_info.team_submissions[team].order_submissions[order_id].completion_duration))
+                    except:
+                        line.append("0")   
                 line.append(str(trial_info.trial_scores[team]))
                 file.write(",".join(line)+"\n")
             file.write("\n\n")
      
     # Visualizing results
+    
+    # Bar chart showing final scores
+    plt.bar(final_scores.keys(), final_scores.values(), color ='maroon', 
+        width = 0.4)
+    plt.xlabel("Team")
+    plt.ylabel("Final Scores")
+    plt.title("ARIAC RESULTS")
+    plt.savefig("graphs/final_scores.png")
+    plt.show()
+    
+    # Multiple lines per trial
     all_trial_scores = get_trial_scores_by_team(team_names, trial_names)
     x = [i+1 for i in range(len(trial_names))]
     for team in team_names:
         plt.plot(x, all_trial_scores[team], label = team)
-    plt.legend() 
+    plt.xlabel("Trial")
+    plt.ylabel("Score")
+    plt.title("Trial Scores")
+    plt.xticks([i+1 for i in range(len(trial_names))],trial_names,rotation=30)
+    plt.legend()
+    plt.subplots_adjust(bottom=0.23)
+    plt.savefig("graphs/trial_scores.png")
     plt.show()
+    
+    # Shows how the final scores increased over time
+    cumulative_totals_by_team = {team : [sum(all_trial_scores[team][:i]) for i in range(1,len(trial_names)+1)] for team in all_trial_scores.keys()}
+    x = [i+1 for i in range(len(trial_names))]
+    for team in team_names:
+        plt.plot(x, cumulative_totals_by_team[team], label = team)
+    plt.xlabel("Trial")
+    plt.ylabel("Score Up To This Point")
+    plt.title("Cumulative Trial Scores")
+    plt.xticks([i+1 for i in range(len(trial_names))],trial_names,rotation=30)
+    plt.legend()
+    plt.savefig("graphs/cumulative_scores.png")
+    
     
     
 if __name__ == "__main__":

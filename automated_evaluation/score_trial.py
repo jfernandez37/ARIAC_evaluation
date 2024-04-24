@@ -271,7 +271,10 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
     for team_submssion in submissions.values():
         costs.append(team_submssion.sensor_cost)
             
-    average_cost = sum(costs)/len(costs)
+    try:
+        average_cost = sum(costs)/len(costs)
+    except ZeroDivisionError:
+        average_cost = 0
     
     # Calculate average submssion duration for each order
     average_order_durations: dict[str, float] = {}
@@ -283,7 +286,10 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
             if orders_sub is not None:
                 durations.append(orders_sub.completion_duration)
 
-        average_order_durations[order.order_id] = sum(durations)/len(durations)
+        try:
+            average_order_durations[order.order_id] = sum(durations)/len(durations)
+        except ZeroDivisionError:
+            average_order_durations[order.order_id] = 0
         
     # Calculate trial score for each team
     trial_scores = {}
@@ -300,7 +306,10 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
             else:
                 priority_multiplier = 3
             
-            efficiency_factor = wt * (average_order_durations[order.order_id]/orders_sub.completion_duration)
+            try:
+                efficiency_factor = wt * (average_order_durations[order.order_id]/orders_sub.completion_duration)
+            except ZeroDivisionError:
+                continue
             
             trial_score += (priority_multiplier * efficiency_factor * orders_sub.score)
                 
