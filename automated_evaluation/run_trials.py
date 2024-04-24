@@ -11,12 +11,17 @@ from docker.models.containers import Container as DockerContainer
 from typing import Optional
 import shutil
 
-# def get_all_containers(client: docker.DockerClient) -> :
-#     containersReturn = []
-#     containers: list[DockerContainer] = client.containers.list(all=True)
-#     for container in containers:
-#         containersReturn.append(container.name)
-#     return containersReturn
+
+class bcolors:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 def trial_succeeded(trial_log: str) -> bool:   
     if os.path.exists(trial_log):
@@ -160,6 +165,9 @@ class Options_GUI(ctk.CTk):
         self.destroy()
 
 if __name__ == "__main__":
+    
+    
+    print(bcolors.OKCYAN + "ARIAC logs for this trial can be found at:" + bcolors.ENDC)
     # Get options from GUI
     setup_gui = Options_GUI()
     setup_gui.mainloop()
