@@ -31,7 +31,7 @@ def trial_succeeded(trial_log: str) -> bool:
             else:
                 return False
     
-    print("Unable to find most log file for most recent run")
+    print(bcolors.FAIL+"Unable to find most log file for most recent run"+bcolors.ENDC)
     return False
 
 def get_most_recent_trial_log(team_name: str, trial_name: str) -> str:
@@ -165,8 +165,6 @@ class Options_GUI(ctk.CTk):
         self.destroy()
 
 if __name__ == "__main__":
-    
-    
     # print(bcolors.OKCYAN + "ARIAC logs for this trial can be found at:" + bcolors.ENDC)
     # Get options from GUI
     setup_gui = Options_GUI()
@@ -178,7 +176,6 @@ if __name__ == "__main__":
     else:
         team_names = setup_gui.team_selections
         trial_names = setup_gui.trial_selections
-        print(trial_names)
         num_iter_per_trial = setup_gui.num_iter_selection
         max_iter_per_trial = setup_gui.max_iter_selection
         use_nvidia = setup_gui.use_nvidia
@@ -229,7 +226,7 @@ if __name__ == "__main__":
                 team_containers[team] = [c for c in all_containers if c.name == team][0]
             except IndexError:
                 team_containers[team] = None
-                print("Unable to rebuild container for team", team)
+                print(bcolors.FAIL+"Unable to rebuild container for team", team+bcolors.ENDC)
             
     # Update trials
     if update_trials:
@@ -239,7 +236,7 @@ if __name__ == "__main__":
 
     # Stop all containers
     for container in team_containers.values():
-        print("Stopping container",container.name)
+        print(bcolors.OKGREEN+"Stopping container",container.name,bcolors.ENDC)
         container.stop()
     
     # Run trials
@@ -249,12 +246,12 @@ if __name__ == "__main__":
             completed_runs = 0
             
             while completed_runs < num_iter_per_trial:
-                print("Restarting container",team_name)
+                print(bcolors.OKGREEN+"Restarting container",team_name,container.name,bcolors.ENDC)
                 container.restart()
                 
                 # Start trial
-                print(f"On trial {trial_runs} of {max_iter_per_trial}")
-                print(f"Completed runs: {completed_runs} out of {num_iter_per_trial}")
+                print(bcolors.OKGREEN+f"On trial {trial_runs} of {max_iter_per_trial} for "+container.name,bcolors.ENDC)
+                print(bcolors.OKGREEN+f"Completed runs: {completed_runs} out of {num_iter_per_trial} for "+container.name,bcolors.ENDC)
                 run_command = ["./run_trial.sh", team_name, trial_name]
                 p = subprocess.Popen(run_command)
                 p.wait()
@@ -266,10 +263,10 @@ if __name__ == "__main__":
                     if trial_succeeded(most_recent_trial_log):
                         completed_runs+=1
                     else:
-                        print("Trial did not run correctly. Trying again")
+                        print(bcolors.FAIL+"Trial did not run correctly. Trying again"+bcolors.ENDC)
                         delete_most_recent_trial_folder(team_name, trial_name)
                 else:
-                    print("Unable to find log file. Running again")
+                    print(bcolors.FAIL+"Unable to find log file. Running again"+container.name,bcolors.ENDC)
                     delete_most_recent_trial_folder(team_name, trial_name)
                 
                 trial_runs+=1
@@ -279,6 +276,6 @@ if __name__ == "__main__":
         
         container.stop()
                 
-        print("="*50)
+        print(bcolors.OKCYAN+"="*50)
         print("Completed all trials for team: "+team_name)
-        print("="*50)
+        print("="*50+bcolors.ENDC)
