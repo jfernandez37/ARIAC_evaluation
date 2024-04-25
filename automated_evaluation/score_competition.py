@@ -4,7 +4,8 @@ from score_trial import (
     get_order_information
 )
 import os
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+import numpy as np
 
 def get_trial_names(team_names: list[str]) -> list[str]:
     """Parses the logs folder of each team found to find all the trials which have been run.
@@ -44,6 +45,42 @@ def get_trial_scores_by_team(team_names: list[str],trial_names: list[str]) -> di
         for team in team_names:
             all_trial_scores[team].append(trial_info.trial_scores[team])
     return all_trial_scores
+
+def total_raw_scores_by_team(team_names, trial_names):
+    total_raw_scores = {team: 0 for team in team_names}
+    for trial in trial_names:
+        trial_info = score_trial(trial)
+        for team in team_names:
+            order_ids = [order.order_id for order in get_order_information(trial)]
+            for order_id in order_ids:
+                try:
+                    total_raw_scores[team] += trial_info.team_submissions[team].order_submissions[order_id].score
+                except:
+                    pass
+    return total_raw_scores
+
+def get_max_scores_for_trial(team_names, trial):
+    order_ids = [order.order_id for order in get_order_information(trial)]
+    trial_max_scores = {}
+    trial_log = os.path.join(os.getcwd(),"logs",team_names[0],f"{trial}_1","trial_log.txt")
+    try:
+        with open(trial_log, "r") as file:
+            lines = file.readlines()
+    except IOError:
+        print(f'Unable to open file: {trial_log}')
+        return None
+
+    # Get only order summary section of trial log
+    start = [("Order Summary" in line) for line in lines].index(True) + 2
+    end = [("Order Details" in line) for line in lines].index(True) - 2
+    summary = lines[start:end]
+    
+    # Calculate the combined raw score for all orders
+    raw_score = 0
+    for i in range(len(summary)//8):
+        trial_max_scores[order_ids[i]] =  int(summary[(i * 8) + 4].split(":")[-1]) 
+        
+    return trial_max_scores
 
 def addlabels(x,y):
     for i in range(len(x)):
@@ -94,6 +131,18 @@ def main():
     plt.savefig("graphs/final_scores.png")
     plt.clf()
     
+    # Bar chart showing final raw scores
+    raw_scores = total_raw_scores_by_team(team_names, trial_names)
+    plt.bar(raw_scores.keys(), raw_scores.values(), 
+        width = 0.4)
+    final_scores_vals = [round(val,3) for val in raw_scores.values()]
+    addlabels(team_names, final_scores_vals)
+    plt.xlabel("Team")
+    plt.ylabel("Final Raw Scores")
+    plt.title("Total Raw Scores")
+    plt.savefig("graphs/final_raw_scores.png")
+    plt.clf()
+    
     # Multiple lines per trial
     all_trial_scores = get_trial_scores_by_team(team_names, trial_names)
     x = [i+1 for i in range(len(trial_names))]
@@ -130,7 +179,41 @@ def main():
     plt.xticks([i+1 for i in range(len(trial_names))],trial_names,rotation=30)
     plt.legend()
     plt.savefig("graphs/cumulative_scores.png")
+    plt.clf()
     
+    # Generate per team graphs
+    for team in team_names:
+        if not os.path.exists(os.path.join("graphs",team)):
+            os.mkdir(os.path.join("graphs",team))
+        for trial in trial_names:
+            order_ids = [order.order_id for order in get_order_information(trial)]
+            trial_info = score_trial(trial)
+            trial_max_scores = get_max_scores_for_trial(team_names, trial)
+            max_scores = [val for val in trial_max_scores.values()]
+            trial_scores = []
+            for order in order_ids:
+                try:
+                    trial_scores.append(int(trial_info.team_submissions[team].order_submissions[order].score))
+                except:
+                    trial_scores.append(0.0)
+            durations = []
+            for order in order_ids:
+                try:
+                    durations.append("Duration: "+str(trial_info.team_submissions[team].order_submissions[order].completion_duration))
+                except:
+                    durations.append("ORDER NOT SUBMITTED")
+            x = [f"Order_{order_ids.index(order_id)}({order_id})\n{durations[order_ids.index(order_id)]}" for order_id in order_ids]
+            X_axis = np.arange(len(x)) 
+            plt.bar(X_axis + 0.2, max_scores, 0.4, label = 'Maximum Score') 
+            plt.bar(X_axis - 0.2, trial_scores, 0.4, label = 'Actual Score') 
+            
+            plt.xticks(X_axis, x) 
+            plt.xlabel("Order") 
+            plt.ylabel("Score") 
+            plt.title(f"Raw Score per Order in {trial}") 
+            plt.legend() 
+            plt.savefig(f"graphs/{team}/{trial}.png")
+            plt.clf()
     
     
 if __name__ == "__main__":
