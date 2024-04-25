@@ -22,10 +22,11 @@ class TeamSubmission():
         self.order_submissions = order_submissions
         
 class TrialInfo():
-    def __init__(self, trial_name: str, trial_scores: dict[str,float], team_submissions = dict[str, TeamSubmission]):
+    def __init__(self, trial_name: str, trial_scores: dict[str,float], team_submissions: dict[str, TeamSubmission],team_best_file_logs: dict[str, str]):
         self.trial_name = trial_name
         self.trial_scores = trial_scores
         self.team_submissions = team_submissions
+        self.team_best_file_logs = team_best_file_logs
         
 def get_order_information(trial: str) -> list[OrderInfo]:
     
@@ -317,8 +318,8 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
         
         trial_score *= cost_factor
         trial_scores[team] = trial_score
-        # print(f'Trial {trial} score for team {team}: {trial_score:.2f}')
-    return TrialInfo(trial, trial_scores, submissions)
+        # print(f'Trial {trial} score for team {team}: {trial_score:.2f}')        
+    return TrialInfo(trial, trial_scores, submissions,{team : get_best_run(team, trial) for team in team_names})
     
 
 if __name__ == "__main__":

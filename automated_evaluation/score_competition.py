@@ -6,6 +6,7 @@ from score_trial import (
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import subprocess
 
 def get_trial_names(team_names: list[str]) -> list[str]:
     """Parses the logs folder of each team found to find all the trials which have been run.
@@ -76,7 +77,6 @@ def get_max_scores_for_trial(team_names, trial):
     summary = lines[start:end]
     
     # Calculate the combined raw score for all orders
-    raw_score = 0
     for i in range(len(summary)//8):
         trial_max_scores[order_ids[i]] =  int(summary[(i * 8) + 4].split(":")[-1]) 
         
@@ -85,6 +85,26 @@ def get_max_scores_for_trial(team_names, trial):
 def addlabels(x,y):
     for i in range(len(x)):
         plt.text(i, y[i], y[i], ha = 'center')
+        
+
+def filter_best_trial_logs(team_names, trial_names):
+    commands = []
+    if not os.path.exists("filtered_state_logs"):
+        os.mkdir("filtered_state_logs")
+    for team in team_names:
+        if not os.path.exists(os.path.join("filtered_state_logs", team)):
+            os.mkdir(os.path.join("filtered_state_logs", team))
+        for trial in trial_names:
+            if not os.path.exists(os.path.join("filtered_state_logs", team, trial)):
+                os.mkdir(os.path.join("filtered_state_logs", team, trial))
+    for trial in trial_names:
+        trial_info = score_trial(trial)
+        for team in team_names:
+            commands.append(["./filter_state_log.sh", os.path.join(f"{trial_info.team_best_file_logs[team]}","state.log"), os.path.join(os.getcwd(),"filtered_state_logs", team, trial,"state.log")])
+    subprocesses = [subprocess.Popen(command) for command in commands] # Runs each of the filtering commands in parallel
+    print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
+    end_codes = [s.wait() for s in subprocesses] # Waits until all of the best state logs are filtered
+    print(f"Saved state log" + ("" if len(commands)<=1 else "s")+"\n\n")
 
 def main():
     team_names = get_team_names()
@@ -206,14 +226,18 @@ def main():
             X_axis = np.arange(len(x)) 
             plt.bar(X_axis + 0.2, max_scores, 0.4, label = 'Maximum Score') 
             plt.bar(X_axis - 0.2, trial_scores, 0.4, label = 'Actual Score') 
-            
+            for i in range(len(x)):
+                plt.text(i, max_scores[i],f"{int(trial_scores[i])}"+" "*13+f"{int(max_scores[i])}", ha = 'center')
             plt.xticks(X_axis, x) 
             plt.xlabel("Order") 
             plt.ylabel("Score") 
-            plt.title(f"Raw Score per Order in {trial}") 
-            plt.legend() 
+            plt.title(f"Raw Score per Order in {trial}")
+            plt.gca().set_xbound(-0.5 ,1.5)
+            plt.legend(loc=(1.01, 0))
+            plt.subplots_adjust(right=0.73)
             plt.savefig(f"graphs/{team}/{trial}.png")
             plt.clf()
+    filter_best_trial_logs(team_names, trial_names)
     
     
 if __name__ == "__main__":
