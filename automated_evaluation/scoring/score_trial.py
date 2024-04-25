@@ -246,7 +246,7 @@ def get_sensor_cost(log_folder: str) -> Optional[int]:
         return None
         
 
-def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
+def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0, create_graphs: bool = False):
     # Get all orders from the trial config file
     order_info = get_order_information(trial)
     TeamSubmission
@@ -279,12 +279,14 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
     if not os.path.exists(graphs_folder):
         os.mkdir(graphs_folder)
 
-    # Generate raw score graph
-    for team in team_names:
-        team_graph_folder = os.path.join(graphs_folder, team)
-        if not os.path.exists(team_graph_folder):
-            os.mkdir(team_graph_folder)
-        team_raw_score_graph(trial, team, order_info, submissions[team].order_submissions.values(), team_graph_folder)
+    
+    if create_graphs:
+        for team in team_names:
+            # Generate raw score graph
+            team_graph_folder = os.path.join(graphs_folder, team)
+            if not os.path.exists(team_graph_folder):
+                os.mkdir(team_graph_folder)
+            team_raw_score_graph(trial, team, order_info, submissions[team].order_submissions.values(), team_graph_folder)
 
     # Calculate average cost
     costs: list[int] = []
@@ -346,13 +348,15 @@ if __name__ == "__main__":
     
     parser.add_argument("trial_name", help="The name of the trial to score")
     
-    parser.add_argument("-c", "--cost-weight", type=float, default=1.0, )
+    parser.add_argument("-c", "--cost-weight", type=float, default=1.0)
     parser.add_argument("-t", "--time-weight", type=float, default=1.0)
+    parser.add_argument("-g", "--graphs", action=argparse.BooleanOptionalAction, default=False)
     
     args = parser.parse_args()
     
     trial_name: str = args.trial_name
     cost_weight: float = args.cost_weight
     time_weight: float = args.time_weight
+    create_graphs: bool = args.graphs
     
-    score_trial(trial_name, cost_weight, time_weight)
+    score_trial(trial_name, cost_weight, time_weight, create_graphs)

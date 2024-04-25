@@ -53,7 +53,5 @@ def team_raw_score_graph(trial: str, team: str, orders: list[OrderInfo], submiss
     ax.legend(loc='upper right', ncol=2)
     ax.set_ylim(0, max([o.max_score for o in orders]) + 3)
     ax.set_xlim(0, 1.2 * num_orders)
-
-    print(plt.gca().get_xbound())
     
     plt.savefig(os.path.join(save_folder, trial + '.png'))
