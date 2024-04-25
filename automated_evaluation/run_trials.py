@@ -167,7 +167,7 @@ class Options_GUI(ctk.CTk):
 if __name__ == "__main__":
     
     
-    print(bcolors.OKCYAN + "ARIAC logs for this trial can be found at:" + bcolors.ENDC)
+    # print(bcolors.OKCYAN + "ARIAC logs for this trial can be found at:" + bcolors.ENDC)
     # Get options from GUI
     setup_gui = Options_GUI()
     setup_gui.mainloop()
