@@ -104,7 +104,7 @@ def filter_best_trial_logs(team_names, trial_names):
     subprocesses = [subprocess.Popen(command) for command in commands] # Runs each of the filtering commands in parallel
     print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
     end_codes = [s.wait() for s in subprocesses] # Waits until all of the best state logs are filtered
-    print(f"Saved state log" + ("" if len(commands)<=1 else "s")+"\n\n")
+    print(f"Saved state logs" + ("" if len(commands)<=1 else "s")+"\n\nTo find filtered state.logs, go to /filtered_state_logs/team/trial")
 
 def main():
     team_names = get_team_names()
