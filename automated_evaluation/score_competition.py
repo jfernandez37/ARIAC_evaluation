@@ -6,19 +6,20 @@ from score_trial import (
 import os
 import matplotlib.pyplot as plt 
 
-def get_trial_names() -> list[str]:
-    """Parses the logs folder of the first team found to find all the trials which have been run.
+def get_trial_names(team_names: list[str]) -> list[str]:
+    """Parses the logs folder of each team found to find all the trials which have been run.
 
     Returns:
         list[str]: list of trial names
     """
     trial_names = []
-    for file in os.scandir(os.path.join(os.getcwd(),"logs",get_team_names()[0])):
-        if file.is_dir():
-            trial_names.append("_".join(os.path.basename(file).split("_")[:-1]))
+    for team in team_names:
+        for file in os.scandir(os.path.join(os.getcwd(),"logs",team)):
+            if file.is_dir():
+                trial_names.append("_".join(os.path.basename(file).split("_")[:-1]))
     return sorted(list(set(trial_names)))
 
-def get_total_scores(team_names: list[str],trial_names: list[str])->dict[str,float]:
+def get_total_scores(team_names: list[str],trial_names: list[str]) -> dict[str,float]:
     """Scores all of the trials and finds the final scores for each team
 
     Returns:
@@ -31,7 +32,7 @@ def get_total_scores(team_names: list[str],trial_names: list[str])->dict[str,flo
             final_scores_by_team[team] += trial_info.trial_scores[team]
     return {k: v for k, v in sorted(final_scores_by_team.items(), key=lambda item: -item[1])}
 
-def get_trial_scores_by_team(team_names: list[str],trial_names: list[str])->dict[str,list[float]]:
+def get_trial_scores_by_team(team_names: list[str],trial_names: list[str]) -> dict[str,list[float]]:
     """Gets the individual trial scores for each team and saves them into a list inside of a dictionary
 
     Returns:
@@ -50,7 +51,7 @@ def addlabels(x,y):
 
 def main():
     team_names = get_team_names()
-    trial_names = get_trial_names()
+    trial_names = get_trial_names(team_names)
     final_scores = get_total_scores(team_names, trial_names)
     with open("ARIAC_results.csv", "w") as file:
         file.write("Leaderboard:\n\n")
@@ -80,7 +81,8 @@ def main():
             file.write("\n\n")
      
     # Visualizing results
-    
+    if not os.path.exists("graphs"):
+        os.mkdir("graphs")
     # Bar chart showing final scores
     plt.bar(final_scores.keys(), final_scores.values(), 
         width = 0.4)
@@ -105,6 +107,17 @@ def main():
     plt.subplots_adjust(bottom=0.23)
     plt.savefig("graphs/trial_scores.png")
     plt.clf()
+    
+    # Bar graph for each trial
+    for trial in trial_names:
+        plt.bar(team_names, [all_trial_scores[team][trial_names.index(trial)] for team in team_names], 
+            width = 0.4)
+        addlabels(team_names, [round(all_trial_scores[team][trial_names.index(trial)],3) for team in team_names])
+        plt.xlabel("Team")
+        plt.ylabel("Score")
+        plt.title(f"{trial} Scores")
+        plt.savefig(f"graphs/{trial}_scores.png")
+        plt.clf()
     
     # Shows how the final scores increased over time
     cumulative_totals_by_team = {team : [sum(all_trial_scores[team][:i]) for i in range(1,len(trial_names)+1)] for team in all_trial_scores.keys()}
