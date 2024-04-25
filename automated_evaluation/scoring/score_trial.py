@@ -2,30 +2,17 @@ import os
 import argparse
 
 import yaml
-import math
 
 from typing import Optional
 
-class OrderInfo():
-    def __init__(self, order_id: str, priority: bool):
-        self.order_id = order_id
-        self.priority = priority
+from structs import (
+    OrderInfo,
+    OrderSubmission,
+    TeamSubmission,
+    TrialInfo
+)
 
-class OrderSubmission():
-    def __init__(self, score: int, completion_duration: float):
-        self.completion_duration = completion_duration
-        self.score = score
-
-class TeamSubmission():
-    def __init__(self, order_submissions : dict[str, Optional[OrderSubmission]], sensor_cost : int):
-        self.sensor_cost = sensor_cost
-        self.order_submissions = order_submissions
-        
-class TrialInfo():
-    def __init__(self, trial_name: str, trial_scores: dict[str,float], team_submissions = dict[str, TeamSubmission]):
-        self.trial_name = trial_name
-        self.trial_scores = trial_scores
-        self.team_submissions = team_submissions
+from graphs import team_raw_score_graph
         
 def get_order_information(trial: str) -> list[OrderInfo]:
     
@@ -38,7 +25,8 @@ def get_order_information(trial: str) -> list[OrderInfo]:
         list[OrderInfo]: list of information about each order in the given trial
     """
     
-    trial_config = os.path.join(os.getcwd(), 'trials', trial + '.yaml')
+    automated_eval_folder = os.path.abspath(os.path.join(__file__, "..", ".."))
+    trial_config = os.path.join(automated_eval_folder, 'trials', trial + '.yaml')
     
     if not os.path.exists(trial_config):
         print(f'Trial config: {trial_config} not found')
@@ -62,10 +50,27 @@ def get_order_information(trial: str) -> list[OrderInfo]:
             priority = order['priority']
         except KeyError:
             priority = False
+
+        max_score = calculate_order_max_score(order)
             
-        info_list.append(OrderInfo(id, priority))
+        info_list.append(OrderInfo(id, priority, max_score))
     
     return info_list
+
+def calculate_order_max_score(order: dict) -> int:
+    try:
+        if order['type'] == 'kitting':
+            num_parts = len(order['kitting_task']['products'])
+            return (1 + 3 * num_parts + num_parts)
+        elif order['type'] == 'assembly':
+            num_parts = len(order['assembly_task']['products'])
+            return (3 * num_parts + num_parts)
+        elif order['type'] == 'combined':
+            num_parts = len(order['combined_task']['products'])
+            return (5 * num_parts + num_parts)
+    except KeyError:
+        print('Unable to compute max score for order')
+        return 0
 
 def get_team_names() -> list[str]:
     
@@ -75,7 +80,8 @@ def get_team_names() -> list[str]:
         list[str]: list of team names
     """
     
-    logs_folder = os.path.join(os.getcwd(), "logs")
+    automated_eval_folder = os.path.abspath(os.path.join(__file__, "..", ".."))
+    logs_folder = os.path.join(automated_eval_folder, "logs")
     
     return [os.path.basename(file) for file in os.scandir(logs_folder) if file.is_dir()]        
 
@@ -144,7 +150,8 @@ def get_best_run(team: str, trial: str) -> str:
     """
     
     # Get all logs for team
-    team_all_logs =  os.scandir(os.path.join(os.getcwd(), "logs", team))
+    automated_eval_folder = os.path.abspath(os.path.join(__file__, "..", ".."))
+    team_all_logs =  os.scandir(os.path.join(automated_eval_folder, "logs", team))
     
     trial_scores = []
     for log_folder in team_all_logs:
@@ -171,14 +178,14 @@ def get_best_run(team: str, trial: str) -> str:
 
 def create_order_submissions(order_ids: list[str], trial_log: str) -> dict[str, Optional[OrderSubmission]]:
     
-    """Parse a trial log file and create an OrderSubmssion for each order id. 
+    """Parse a trial log file and create an OrderSubmission for each order id. 
 
     Args:
         order_ids (list[str]): list of order ids for the trial
         trial_log (str): path of a the log file for a trial run
 
     Returns:
-        dict[str, Optional[OrderSubmission]]: order submsissions for each id
+        dict[str, Optional[OrderSubmission]]: order submissions for each id
     """
     
     order_submissions: dict[str, Optional[OrderSubmission]] = {}
@@ -242,11 +249,11 @@ def get_sensor_cost(log_folder: str) -> Optional[int]:
 def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
     # Get all orders from the trial config file
     order_info = get_order_information(trial)
-    
+    TeamSubmission
     # Get team names from competitor configs
     team_names = get_team_names()
     
-    # Create TeamSubmssion for each team
+    # Create TeamSubmission for each team
     submissions : dict[str, TeamSubmission] = {}
     
     for team in team_names:
@@ -259,30 +266,43 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
         orders_submissions = create_order_submissions(order_ids, trial_log)
         
         sensor_cost = get_sensor_cost(best_run_folder)
-        
+        TeamSubmission
         if sensor_cost is None:
-            print(f'ERROR: Unable to create submssion for team: {team}')
+            print(f'ERROR: Unable to create submission for team: {team}')
             continue
         
         submissions[team] = TeamSubmission(orders_submissions, sensor_cost)
-        
+    
+    automated_eval_folder = os.path.abspath(os.path.join(__file__, "..", ".."))
+    graphs_folder = os.path.join(automated_eval_folder, 'scoring', 'graphs')
+    
+    if not os.path.exists(graphs_folder):
+        os.mkdir(graphs_folder)
+
+    # Generate raw score graph
+    for team in team_names:
+        team_graph_folder = os.path.join(graphs_folder, team)
+        if not os.path.exists(team_graph_folder):
+            os.mkdir(team_graph_folder)
+        team_raw_score_graph(trial, team, order_info, submissions[team].order_submissions.values(), team_graph_folder)
+
     # Calculate average cost
     costs: list[int] = []
-    for team_submssion in submissions.values():
-        costs.append(team_submssion.sensor_cost)
+    for team_submission in submissions.values():
+        costs.append(team_submission.sensor_cost)
             
     try:
         average_cost = sum(costs)/len(costs)
     except ZeroDivisionError:
         average_cost = 0
     
-    # Calculate average submssion duration for each order
+    # Calculate average submission duration for each order
     average_order_durations: dict[str, float] = {}
     for order in order_info:
         durations: list[float] = []
         
-        for team_submssion in submissions.values():
-            orders_sub = team_submssion.order_submissions[order.order_id]
+        for team_submission in submissions.values():
+            orders_sub = team_submission.order_submissions[order.order_id]
             if orders_sub is not None:
                 durations.append(orders_sub.completion_duration)
 
@@ -311,13 +331,13 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
             except ZeroDivisionError:
                 continue
             
-            trial_score += (priority_multiplier * efficiency_factor * orders_sub.score)
+            trial_score += (priority_multiplier * efficiency_factor * orders_sub.raw_score)
                 
         cost_factor = wc * (average_cost/submission.sensor_cost)
         
         trial_score *= cost_factor
         trial_scores[team] = trial_score
-        # print(f'Trial {trial} score for team {team}: {trial_score:.2f}')
+        
     return TrialInfo(trial, trial_scores, submissions)
     
 
