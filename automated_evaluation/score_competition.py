@@ -63,7 +63,10 @@ def total_raw_scores_by_team(team_names, trial_names):
 def get_max_scores_for_trial(team_names, trial):
     order_ids = [order.order_id for order in get_order_information(trial)]
     trial_max_scores = {}
-    trial_log = os.path.join(os.getcwd(),"logs",team_names[0],f"{trial}_1","trial_log.txt")
+    for team_name in team_names:
+        trial_log = os.path.join(os.getcwd(),"logs",team_name,f"{trial}_1","trial_log.txt")
+        if os.path.exists(trial_log):
+            break
     try:
         with open(trial_log, "r") as file:
             lines = file.readlines()
@@ -117,6 +120,7 @@ def main():
 
         file.write("\n\n\nScore Breakdown:\n\n")
         for trial in trial_names:
+            print(trial)
             file.write(f"{trial}:\n")
             order_ids = [order.order_id for order in get_order_information(trial)]
             file.write("Team,"+",".join([f"Order {order_ids.index(order_id)}({order_id}) Score,Order {order_ids.index(order_id)}({order_id}) Duration" for order_id in order_ids])+",trial_score\n")
@@ -128,11 +132,11 @@ def main():
                     try:
                         line.append(str(trial_info.team_submissions[team].order_submissions[order_id].score))
                     except:
-                        line.append("0")
+                        line.append("N/A")
                     try:
                         line.append(str(trial_info.team_submissions[team].order_submissions[order_id].completion_duration))
                     except:
-                        line.append("0")   
+                        line.append("N/A")   
                 line.append(str(trial_info.trial_scores[team]))
                 file.write(",".join(line)+"\n")
             file.write("\n\n")
@@ -237,7 +241,7 @@ def main():
             plt.subplots_adjust(right=0.73)
             plt.savefig(f"graphs/{team}/{trial}.png")
             plt.clf()
-    filter_best_trial_logs(team_names, trial_names)
+    # filter_best_trial_logs(team_names, trial_names)
     
     
 if __name__ == "__main__":
