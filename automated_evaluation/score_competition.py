@@ -120,7 +120,6 @@ def main():
 
         file.write("\n\n\nScore Breakdown:\n\n")
         for trial in trial_names:
-            print(trial)
             file.write(f"{trial}:\n")
             order_ids = [order.order_id for order in get_order_information(trial)]
             file.write("Team,"+",".join([f"Order {order_ids.index(order_id)}({order_id}) Score,Order {order_ids.index(order_id)}({order_id}) Duration" for order_id in order_ids])+",trial_score\n")
