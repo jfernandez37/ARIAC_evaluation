@@ -167,10 +167,12 @@ def get_best_run(team: str, trial: str) -> str:
     
     # Sort trial first by raw_score, then by completion time
     trial_scores_sorted = sorted(trial_scores, key=lambda x:(-x[1], x[2]))
+    try:
+        return trial_scores_sorted[0][0]
+    except:
+        return "N/A"
 
-    return trial_scores_sorted[0][0]
-
-def create_order_submissions(order_ids: list[str], trial_log: str) -> dict[str, Optional[OrderSubmission]]:
+def create_order_submissions(order_ids: list[str], trial_log: str, valid: bool = True) -> dict[str, Optional[OrderSubmission]]:
     
     """Parse a trial log file and create an OrderSubmssion for each order id. 
 
@@ -183,6 +185,9 @@ def create_order_submissions(order_ids: list[str], trial_log: str) -> dict[str, 
     """
     
     order_submissions: dict[str, Optional[OrderSubmission]] = {}
+    
+    if not valid:
+        return {id: None for id in order_ids}
     
     try:
         with open(trial_log, "r") as file:
@@ -238,7 +243,24 @@ def get_sensor_cost(log_folder: str) -> Optional[int]:
     except ValueError:
         print(f'Unable to read cost from file')
         return None
-        
+
+def find_sensor_cost(team: str)->Optional[int]:
+    team_all_logs =  os.scandir(os.path.join(os.getcwd(), "logs", team))
+    
+    for log_folder in team_all_logs:
+        try:
+            sensor_cost_path = os.path.join(os.getcwd(),"logs",team,os.path.basename(log_folder),"sensor_cost.txt")
+            with open(sensor_cost_path) as file:
+                lines = file.readlines()
+        except IOError:
+            print(f'Unable to open file: {sensor_cost_path}')
+            return None
+    
+        try:
+            return int(lines[15].split("$")[-1])
+        except ValueError:
+            print(f'Unable to read cost from file')
+    return None
 
 def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
     # Get all orders from the trial config file
@@ -246,20 +268,24 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
     
     # Get team names from competitor configs
     team_names = get_team_names()
-    
     # Create TeamSubmssion for each team
     submissions : dict[str, TeamSubmission] = {}
     
     for team in team_names:
         best_run_folder = get_best_run(team, trial)
         
-        trial_log = os.path.join(best_run_folder, "trial_log.txt")
-        
         order_ids = [i.order_id for i in order_info]
+
+        if best_run_folder == "N/A":
+            orders_submissions = create_order_submissions(order_ids, "", False)
+            sensor_cost = find_sensor_cost(team)
         
-        orders_submissions = create_order_submissions(order_ids, trial_log)
-        
-        sensor_cost = get_sensor_cost(best_run_folder)
+        else:
+            trial_log = os.path.join(best_run_folder, "trial_log.txt")
+            
+            orders_submissions = create_order_submissions(order_ids, trial_log)
+            
+            sensor_cost = get_sensor_cost(best_run_folder)
         
         if sensor_cost is None:
             print(f'ERROR: Unable to create submssion for team: {team}')
