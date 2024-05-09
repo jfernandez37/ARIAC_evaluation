@@ -296,7 +296,8 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
     # Calculate average cost
     costs: list[int] = []
     for team_submssion in submissions.values():
-        costs.append(team_submssion.sensor_cost)
+        if sum([0 if order_sub==None else order_sub.score for order_sub in team_submssion.order_submissions.values()]):
+            costs.append(team_submssion.sensor_cost)
             
     try:
         average_cost = sum(costs)/len(costs)
