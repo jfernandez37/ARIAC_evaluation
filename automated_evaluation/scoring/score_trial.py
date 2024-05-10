@@ -67,16 +67,17 @@ def calculate_order_max_score(order: dict) -> int:
     try:
         if order['type'] == 'kitting':
             num_parts = len(order['kitting_task']['products'])
-            return (1 + 3 * num_parts + num_parts)
+            return 1 + 3 * num_parts + num_parts
         elif order['type'] == 'assembly':
             num_parts = len(order['assembly_task']['products'])
-            return (3 * num_parts + num_parts)
+            return 3 * num_parts + num_parts
         elif order['type'] == 'combined':
             num_parts = len(order['combined_task']['products'])
-            return (5 * num_parts + num_parts)
+            return 5 * num_parts + num_parts
     except KeyError:
         print('Unable to compute max score for order')
-        return 0
+    
+    return 0
     
 def get_team_names() -> list[str]:
     
@@ -141,7 +142,7 @@ def get_trial_completion_time(trial_log: str) -> Optional[float]:
     
     return float(lines[6].split(":")[-1])
             
-def get_best_run(team: str, trial: str) -> str:
+def get_best_run(team: str, trial: str) -> Optional[str]:
     
     """ Get the path of a log folder for the best run of a given trial 
     for a given team. Runs are ranked initially based on score, then
@@ -177,12 +178,16 @@ def get_best_run(team: str, trial: str) -> str:
             duration_time = get_trial_completion_time(log_file)
             trial_scores.append((log_folder.path, raw_score, duration_time))
     
+    if not trial_scores:
+        print(f'Team {team} has no completed runs for trial {trial}')
+        return None
+    
     # Sort trial first by raw_score, then by completion time
     trial_scores_sorted = sorted(trial_scores, key=lambda x:(-x[1], x[2]))
     try:
         return trial_scores_sorted[0][0]
     except:
-        return "N/A"
+        return None
 
 def create_order_submissions(order_ids: list[str], trial_log: str, valid: bool = True) -> dict[str, Optional[OrderSubmission]]:
     
@@ -274,7 +279,7 @@ def find_sensor_cost(team: str)->Optional[int]:
             print(f'Unable to read cost from file')
     return None
 
-def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
+def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0, create_graphs: bool = False):
     # Get all orders from the trial config file
     order_info = get_order_information(trial)
     
@@ -288,7 +293,7 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
         
         order_ids = [i.order_id for i in order_info]
 
-        if best_run_folder == "N/A":
+        if best_run_folder == None:
             orders_submissions = create_order_submissions(order_ids, "", False)
             sensor_cost = find_sensor_cost(team)
         
@@ -312,11 +317,13 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0):
         os.mkdir(graphs_folder)
 
     # Generate raw score graph
-    for team in team_names:
-        team_graph_folder = os.path.join(graphs_folder, team)
-        if not os.path.exists(team_graph_folder):
-            os.mkdir(team_graph_folder)
-        team_raw_score_graph(trial, team, order_info, submissions[team].order_submissions.values(), team_graph_folder)
+    if create_graphs:
+        for team in team_names:
+            # Generate raw score graph
+            team_graph_folder = os.path.join(graphs_folder, team)
+            if not os.path.exists(team_graph_folder):
+                os.mkdir(team_graph_folder)
+            team_raw_score_graph(trial, team, order_info, submissions[team].order_submissions.values(), team_graph_folder)
         
     # Calculate average cost
     costs: list[int] = []
@@ -378,13 +385,15 @@ if __name__ == "__main__":
     
     parser.add_argument("trial_name", help="The name of the trial to score")
     
-    parser.add_argument("-c", "--cost-weight", type=float, default=1.0, )
+    parser.add_argument("-c", "--cost-weight", type=float, default=1.0)
     parser.add_argument("-t", "--time-weight", type=float, default=1.0)
+    parser.add_argument("-g", "--graphs", action=argparse.BooleanOptionalAction, default=False)
     
     args = parser.parse_args()
     
     trial_name: str = args.trial_name
     cost_weight: float = args.cost_weight
     time_weight: float = args.time_weight
+    create_graphs: bool = args.graphs
     
     score_trial(trial_name, cost_weight, time_weight)

@@ -16,7 +16,8 @@ def get_trial_names(team_names: list[str]) -> list[str]:
     """
     trial_names = []
     for team in team_names:
-        for file in os.scandir(os.path.join(os.getcwd(),"logs",team)):
+        automated_eval_folder = os.path.abspath(os.path.join(__file__, "..", ".."))
+        for file in os.scandir(os.path.join(automated_eval_folder,"logs",team)):
             if file.is_dir():
                 trial_names.append("_".join(os.path.basename(file).split("_")[:-1]))
     return sorted(list(set(trial_names)))
