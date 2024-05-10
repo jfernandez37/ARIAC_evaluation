@@ -65,7 +65,8 @@ def get_max_scores_for_trial(team_names, trial):
     order_ids = [order.order_id for order in get_order_information(trial)]
     trial_max_scores = {}
     for team_name in team_names:
-        trial_log = os.path.join(os.getcwd(),"logs",team_name,f"{trial}_1","trial_log.txt")
+        automated_eval_folder = os.path.abspath(os.path.join(__file__, "..", ".."))
+        trial_log = os.path.join(automated_eval_folder,"logs",team_name,f"{trial}_1","trial_log.txt")
         if os.path.exists(trial_log):
             break
     try:
