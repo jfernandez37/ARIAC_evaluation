@@ -56,7 +56,7 @@ def total_raw_scores_by_team(team_names, trial_names):
             order_ids = [order.order_id for order in get_order_information(trial)]
             for order_id in order_ids:
                 try:
-                    total_raw_scores[team] += trial_info.team_submissions[team].order_submissions[order_id].score
+                    total_raw_scores[team] += trial_info.team_submissions[team].order_submissions[order_id].raw_score
                 except:
                     pass
     return total_raw_scores
@@ -130,7 +130,7 @@ def main():
                 line = []
                 for order_id in order_ids:
                     try:
-                        line.append(str(trial_info.team_submissions[team].order_submissions[order_id].score))
+                        line.append(str(trial_info.team_submissions[team].order_submissions[order_id].raw_score))
                     except:
                         line.append("N/A")
                     try:
@@ -217,7 +217,7 @@ def main():
             trial_scores = []
             for order in order_ids:
                 try:
-                    trial_scores.append(int(trial_info.team_submissions[team].order_submissions[order].score))
+                    trial_scores.append(int(trial_info.team_submissions[team].order_submissions[order].raw_score))
                 except:
                     trial_scores.append(0.0)
             durations = []
