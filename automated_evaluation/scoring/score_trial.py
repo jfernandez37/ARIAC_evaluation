@@ -329,7 +329,7 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0, create_graphs: boo
     # Calculate average cost
     costs: list[int] = []
     for team_submission in submissions.values():
-        if sum([0 if order_sub==None else order_sub.score for order_sub in team_submission.order_submissions.values()]):
+        if sum([0 if order_sub==None else order_sub.raw_score for order_sub in team_submission.order_submissions.values()]):
             costs.append(team_submission.sensor_cost)
             
     try:
