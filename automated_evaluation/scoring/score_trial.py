@@ -262,7 +262,8 @@ def get_sensor_cost(log_folder: str) -> Optional[int]:
         return None
 
 def find_sensor_cost(team: str)->Optional[int]:
-    team_all_logs =  os.scandir(os.path.join(os.getcwd(), "logs", team))
+    automated_eval_folder = os.path.abspath(os.path.join(__file__, "..", ".."))
+    team_all_logs =  os.scandir(os.path.join(automated_eval_folder, "logs", team))
     
     for log_folder in team_all_logs:
         try:
