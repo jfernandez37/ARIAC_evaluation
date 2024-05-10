@@ -125,7 +125,7 @@ def main():
             file.write(f"{trial}:\n")
             order_ids = [order.order_id for order in get_order_information(trial)]
             file.write("Team,"+",".join([f"Order {order_ids.index(order_id)}({order_id}) Score,Order {order_ids.index(order_id)}({order_id}) Duration" for order_id in order_ids])+",trial_score\n")
-            trial_info = score_trial(trial)
+            trial_info = score_trial(trial, create_graphs=True)
             for team in team_names:
                 file.write(team+",")
                 line = []
