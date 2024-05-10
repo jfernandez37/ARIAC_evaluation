@@ -142,106 +142,106 @@ def main():
                 file.write(",".join(line)+"\n")
             file.write("\n\n")
      
-    # Visualizing results
-    if not os.path.exists("graphs"):
-        os.mkdir("graphs")
-    # Bar chart showing final scores
-    plt.bar(final_scores.keys(), final_scores.values(), 
-        width = 0.4)
-    final_scores_vals = [round(val,3) for val in final_scores.values()]
-    addlabels(team_names, final_scores_vals)
-    plt.xlabel("Team")
-    plt.ylabel("Final Scores")
-    plt.title("ARIAC RESULTS")
-    plt.savefig("graphs/final_scores.png")
-    plt.clf()
+    # # Visualizing results
+    # if not os.path.exists("graphs"):
+    #     os.mkdir("graphs")
+    # # Bar chart showing final scores
+    # plt.bar(final_scores.keys(), final_scores.values(), 
+    #     width = 0.4)
+    # final_scores_vals = [round(val,3) for val in final_scores.values()]
+    # addlabels(team_names, final_scores_vals)
+    # plt.xlabel("Team")
+    # plt.ylabel("Final Scores")
+    # plt.title("ARIAC RESULTS")
+    # plt.savefig("graphs/final_scores.png")
+    # plt.clf()
     
-    # Bar chart showing final raw scores
-    raw_scores = total_raw_scores_by_team(team_names, trial_names)
-    plt.bar(raw_scores.keys(), raw_scores.values(), 
-        width = 0.4)
-    final_scores_vals = [round(val,3) for val in raw_scores.values()]
-    addlabels(team_names, final_scores_vals)
-    plt.xlabel("Team")
-    plt.ylabel("Final Raw Scores")
-    plt.title("Total Raw Scores")
-    plt.savefig("graphs/final_raw_scores.png")
-    plt.clf()
+    # # Bar chart showing final raw scores
+    # raw_scores = total_raw_scores_by_team(team_names, trial_names)
+    # plt.bar(raw_scores.keys(), raw_scores.values(), 
+    #     width = 0.4)
+    # final_scores_vals = [round(val,3) for val in raw_scores.values()]
+    # addlabels(team_names, final_scores_vals)
+    # plt.xlabel("Team")
+    # plt.ylabel("Final Raw Scores")
+    # plt.title("Total Raw Scores")
+    # plt.savefig("graphs/final_raw_scores.png")
+    # plt.clf()
     
-    # Multiple lines per trial
-    all_trial_scores = get_trial_scores_by_team(team_names, trial_names)
-    x = [i+1 for i in range(len(trial_names))]
-    for team in team_names:
-        plt.plot(x, all_trial_scores[team], label = team, marker='o')
-    plt.xlabel("Trial")
-    plt.ylabel("Score")
-    plt.title("Trial Scores")
-    plt.xticks([i+1 for i in range(len(trial_names))],trial_names,rotation=30)
-    plt.legend()
-    plt.subplots_adjust(bottom=0.23)
-    plt.savefig("graphs/trial_scores.png")
-    plt.clf()
+    # # Multiple lines per trial
+    # all_trial_scores = get_trial_scores_by_team(team_names, trial_names)
+    # x = [i+1 for i in range(len(trial_names))]
+    # for team in team_names:
+    #     plt.plot(x, all_trial_scores[team], label = team, marker='o')
+    # plt.xlabel("Trial")
+    # plt.ylabel("Score")
+    # plt.title("Trial Scores")
+    # plt.xticks([i+1 for i in range(len(trial_names))],trial_names,rotation=30)
+    # plt.legend()
+    # plt.subplots_adjust(bottom=0.23)
+    # plt.savefig("graphs/trial_scores.png")
+    # plt.clf()
     
-    # Bar graph for each trial
-    for trial in trial_names:
-        plt.bar(team_names, [all_trial_scores[team][trial_names.index(trial)] for team in team_names], 
-            width = 0.4)
-        addlabels(team_names, [round(all_trial_scores[team][trial_names.index(trial)],3) for team in team_names])
-        plt.xlabel("Team")
-        plt.ylabel("Score")
-        plt.title(f"{trial} Scores")
-        plt.savefig(f"graphs/{trial}_scores.png")
-        plt.clf()
+    # # Bar graph for each trial
+    # for trial in trial_names:
+    #     plt.bar(team_names, [all_trial_scores[team][trial_names.index(trial)] for team in team_names], 
+    #         width = 0.4)
+    #     addlabels(team_names, [round(all_trial_scores[team][trial_names.index(trial)],3) for team in team_names])
+    #     plt.xlabel("Team")
+    #     plt.ylabel("Score")
+    #     plt.title(f"{trial} Scores")
+    #     plt.savefig(f"graphs/{trial}_scores.png")
+    #     plt.clf()
     
-    # Shows how the final scores increased over time
-    cumulative_totals_by_team = {team : [sum(all_trial_scores[team][:i]) for i in range(1,len(trial_names)+1)] for team in all_trial_scores.keys()}
-    x = [i+1 for i in range(len(trial_names))]
-    for team in team_names:
-        plt.plot(x, cumulative_totals_by_team[team], label = team, marker='o')
-    plt.xlabel("Trial")
-    plt.ylabel("Score Up To This Point")
-    plt.title("Cumulative Trial Scores")
-    plt.xticks([i+1 for i in range(len(trial_names))],trial_names,rotation=30)
-    plt.legend()
-    plt.savefig("graphs/cumulative_scores.png")
-    plt.clf()
+    # # Shows how the final scores increased over time
+    # cumulative_totals_by_team = {team : [sum(all_trial_scores[team][:i]) for i in range(1,len(trial_names)+1)] for team in all_trial_scores.keys()}
+    # x = [i+1 for i in range(len(trial_names))]
+    # for team in team_names:
+    #     plt.plot(x, cumulative_totals_by_team[team], label = team, marker='o')
+    # plt.xlabel("Trial")
+    # plt.ylabel("Score Up To This Point")
+    # plt.title("Cumulative Trial Scores")
+    # plt.xticks([i+1 for i in range(len(trial_names))],trial_names,rotation=30)
+    # plt.legend()
+    # plt.savefig("graphs/cumulative_scores.png")
+    # plt.clf()
     
-    # Generate per team graphs
-    for team in team_names:
-        if not os.path.exists(os.path.join("graphs",team)):
-            os.mkdir(os.path.join("graphs",team))
-        for trial in trial_names:
-            order_ids = [order.order_id for order in get_order_information(trial)]
-            trial_info = score_trial(trial)
-            trial_max_scores = get_max_scores_for_trial(team_names, trial)
-            max_scores = [val for val in trial_max_scores.values()]
-            trial_scores = []
-            for order in order_ids:
-                try:
-                    trial_scores.append(int(trial_info.team_submissions[team].order_submissions[order].raw_score))
-                except:
-                    trial_scores.append(0.0)
-            durations = []
-            for order in order_ids:
-                try:
-                    durations.append("Duration: "+str(trial_info.team_submissions[team].order_submissions[order].completion_duration))
-                except:
-                    durations.append("ORDER NOT SUBMITTED")
-            x = [f"Order_{order_ids.index(order_id)}({order_id})\n{durations[order_ids.index(order_id)]}" for order_id in order_ids]
-            X_axis = np.arange(len(x)) 
-            plt.bar(X_axis + 0.2, max_scores, 0.4, label = 'Maximum Score') 
-            plt.bar(X_axis - 0.2, trial_scores, 0.4, label = 'Actual Score') 
-            for i in range(len(x)):
-                plt.text(i, max_scores[i],f"{int(trial_scores[i])}"+" "*13+f"{int(max_scores[i])}", ha = 'center')
-            plt.xticks(X_axis, x) 
-            plt.xlabel("Order") 
-            plt.ylabel("Score") 
-            plt.title(f"Raw Score per Order in {trial}")
-            plt.gca().set_xbound(-0.5 ,1.5)
-            plt.legend(loc=(1.01, 0))
-            plt.subplots_adjust(right=0.73)
-            plt.savefig(f"graphs/{team}/{trial}.png")
-            plt.clf()
+    # # Generate per team graphs
+    # for team in team_names:
+    #     if not os.path.exists(os.path.join("graphs",team)):
+    #         os.mkdir(os.path.join("graphs",team))
+    #     for trial in trial_names:
+    #         order_ids = [order.order_id for order in get_order_information(trial)]
+    #         trial_info = score_trial(trial)
+    #         trial_max_scores = get_max_scores_for_trial(team_names, trial)
+    #         max_scores = [val for val in trial_max_scores.values()]
+    #         trial_scores = []
+    #         for order in order_ids:
+    #             try:
+    #                 trial_scores.append(int(trial_info.team_submissions[team].order_submissions[order].raw_score))
+    #             except:
+    #                 trial_scores.append(0.0)
+    #         durations = []
+    #         for order in order_ids:
+    #             try:
+    #                 durations.append("Duration: "+str(trial_info.team_submissions[team].order_submissions[order].completion_duration))
+    #             except:
+    #                 durations.append("ORDER NOT SUBMITTED")
+    #         x = [f"Order_{order_ids.index(order_id)}({order_id})\n{durations[order_ids.index(order_id)]}" for order_id in order_ids]
+    #         X_axis = np.arange(len(x)) 
+    #         plt.bar(X_axis + 0.2, max_scores, 0.4, label = 'Maximum Score') 
+    #         plt.bar(X_axis - 0.2, trial_scores, 0.4, label = 'Actual Score') 
+    #         for i in range(len(x)):
+    #             plt.text(i, max_scores[i],f"{int(trial_scores[i])}"+" "*13+f"{int(max_scores[i])}", ha = 'center')
+    #         plt.xticks(X_axis, x) 
+    #         plt.xlabel("Order") 
+    #         plt.ylabel("Score") 
+    #         plt.title(f"Raw Score per Order in {trial}")
+    #         plt.gca().set_xbound(-0.5 ,1.5)
+    #         plt.legend(loc=(1.01, 0))
+    #         plt.subplots_adjust(right=0.73)
+    #         plt.savefig(f"graphs/{team}/{trial}.png")
+    #         plt.clf()
     # filter_best_trial_logs(team_names, trial_names)
     
     
