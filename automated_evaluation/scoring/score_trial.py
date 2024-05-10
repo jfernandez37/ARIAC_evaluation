@@ -267,7 +267,7 @@ def find_sensor_cost(team: str)->Optional[int]:
     
     for log_folder in team_all_logs:
         try:
-            sensor_cost_path = os.path.join(os.getcwd(),"logs",team,os.path.basename(log_folder),"sensor_cost.txt")
+            sensor_cost_path = os.path.join(team_all_logs,os.path.basename(log_folder),"sensor_cost.txt")
             with open(sensor_cost_path) as file:
                 lines = file.readlines()
         except IOError:
