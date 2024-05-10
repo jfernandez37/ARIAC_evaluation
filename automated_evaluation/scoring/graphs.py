@@ -1,6 +1,7 @@
 import os
 from typing import Optional
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 
 from structs import (
@@ -16,7 +17,8 @@ def team_raw_score_graph(trial: str, team: str, orders: list[OrderInfo], submiss
     for i in range(num_orders):
         centers.append(0.6 + 1.2 * i)
 
-    fig, ax = plt.subplots()
+    ax: Axes
+    _, ax = plt.subplots()
 
     order_ids = [f'Order ID:\n{o.order_id}' for o in orders]
 
@@ -53,7 +55,5 @@ def team_raw_score_graph(trial: str, team: str, orders: list[OrderInfo], submiss
     ax.legend(loc='upper right', ncol=2)
     ax.set_ylim(0, max([o.max_score for o in orders]) + 3)
     ax.set_xlim(0, 1.2 * num_orders)
-
-    print(plt.gca().get_xbound())
 
     plt.savefig(os.path.join(save_folder, trial + '.png'))
