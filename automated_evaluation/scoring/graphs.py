@@ -3,7 +3,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from automated_evaluation.scoring.structs import (
+from structs import (
     OrderInfo,
     OrderSubmission
 )
