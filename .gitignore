@@ -1,4 +1,5 @@
 .history
+*.pyc
 
 automated_evaluation/logs
 
@@ -14,4 +15,4 @@ automated_evaluation/__pycache__
 
 automated_evaluation/ARIAC_results.csv
 
-automated_evaluation/filtered_state_logs
+automated_evaluation/scoring/graphs/*
