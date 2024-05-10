@@ -1,6 +1,7 @@
 import os
 from typing import Optional
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 
 from structs import (
@@ -16,7 +17,8 @@ def team_raw_score_graph(trial: str, team: str, orders: list[OrderInfo], submiss
     for i in range(num_orders):
         centers.append(0.6 + 1.2 * i)
 
-    fig, ax = plt.subplots()
+    ax: Axes
+    _, ax = plt.subplots()
 
     order_ids = [f'Order ID:\n{o.order_id}' for o in orders]
 

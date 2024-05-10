@@ -61,16 +61,17 @@ def calculate_order_max_score(order: dict) -> int:
     try:
         if order['type'] == 'kitting':
             num_parts = len(order['kitting_task']['products'])
-            return (1 + 3 * num_parts + num_parts)
+            return 1 + 3 * num_parts + num_parts
         elif order['type'] == 'assembly':
             num_parts = len(order['assembly_task']['products'])
-            return (3 * num_parts + num_parts)
+            return 3 * num_parts + num_parts
         elif order['type'] == 'combined':
             num_parts = len(order['combined_task']['products'])
-            return (5 * num_parts + num_parts)
+            return 5 * num_parts + num_parts
     except KeyError:
         print('Unable to compute max score for order')
-        return 0
+    
+    return 0
 
 def get_team_names() -> list[str]:
     
@@ -135,7 +136,7 @@ def get_trial_completion_time(trial_log: str) -> Optional[float]:
     
     return float(lines[6].split(":")[-1])
             
-def get_best_run(team: str, trial: str) -> str:
+def get_best_run(team: str, trial: str) -> Optional[str]:
     
     """ Get the path of a log folder for the best run of a given trial 
     for a given team. Runs are ranked initially based on score, then
@@ -170,6 +171,10 @@ def get_best_run(team: str, trial: str) -> str:
             raw_score = get_trial_raw_score(log_file)
             duration_time = get_trial_completion_time(log_file)
             trial_scores.append((log_folder.path, raw_score, duration_time))
+    
+    if not trial_scores:
+        print(f'Team {team} has no completed runs for trial {trial}')
+        return None
     
     # Sort trial first by raw_score, then by completion time
     trial_scores_sorted = sorted(trial_scores, key=lambda x:(-x[1], x[2]))
@@ -249,7 +254,7 @@ def get_sensor_cost(log_folder: str) -> Optional[int]:
 def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0, create_graphs: bool = False):
     # Get all orders from the trial config file
     order_info = get_order_information(trial)
-    TeamSubmission
+
     # Get team names from competitor configs
     team_names = get_team_names()
     
@@ -259,6 +264,9 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0, create_graphs: boo
     for team in team_names:
         best_run_folder = get_best_run(team, trial)
         
+        if best_run_folder is None:
+            continue
+        
         trial_log = os.path.join(best_run_folder, "trial_log.txt")
         
         order_ids = [i.order_id for i in order_info]
@@ -266,7 +274,7 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0, create_graphs: boo
         orders_submissions = create_order_submissions(order_ids, trial_log)
         
         sensor_cost = get_sensor_cost(best_run_folder)
-        TeamSubmission
+
         if sensor_cost is None:
             print(f'ERROR: Unable to create submission for team: {team}')
             continue
@@ -279,14 +287,14 @@ def score_trial(trial: str, wc: float = 1.0, wt: float = 1.0, create_graphs: boo
     if not os.path.exists(graphs_folder):
         os.mkdir(graphs_folder)
 
-    
     if create_graphs:
-        for team in team_names:
+        for team, team_sumbission in submissions.items():
             # Generate raw score graph
             team_graph_folder = os.path.join(graphs_folder, team)
             if not os.path.exists(team_graph_folder):
                 os.mkdir(team_graph_folder)
-            team_raw_score_graph(trial, team, order_info, submissions[team].order_submissions.values(), team_graph_folder)
+
+            team_raw_score_graph(trial, team, order_info, list(team_sumbission.order_submissions.values()), team_graph_folder)
 
     # Calculate average cost
     costs: list[int] = []
