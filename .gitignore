@@ -1,7 +1,20 @@
 .history
+*.pyc
+
+*.vscode
 
 automated_evaluation/logs
+
+automated_evaluation/old_logs
 
 automated_evaluation/competitor_configs/*
 
 automated_evaluation/trials/*
+
+automated_evaluation/graphs
+
+automated_evaluation/__pycache__
+
+automated_evaluation/ARIAC_results.csv
+
+automated_evaluation/scoring/graphs/*
