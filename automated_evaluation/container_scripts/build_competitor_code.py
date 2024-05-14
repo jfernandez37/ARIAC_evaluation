@@ -51,14 +51,6 @@ def main():
         print("Unable to find package_name")
         sys.exit()
     
-    packages_to_skip = ["ariac_controllers", "ariac_description", "ariac_gui", "ariac_moveit_config", "ariac_msgs", "ariac_plugins", "ariac_sensors"]
-    colcon_args = ["--packages-skip"] + packages_to_skip
-    
-    try:
-        colcon_args = colcon_args + data["build"]["extra_colcon_args"]
-    except KeyError:
-        pass
-    
     # Clone the repository
     if team_name == "nist_competitor":
         clone_cmd = f"git clone https://{repository} /workspace/src/{team_name} --branch {tag}"
@@ -86,7 +78,7 @@ def main():
     subprocess.run(rosdep_cmd, shell=True)
 
     # Build the workspace
-    build_cmd = "colcon build " + " ".join([str(arg) for arg in colcon_args])
+    build_cmd = "colcon build --packages-skip ariac_controllers ariac_description ariac_gui ariac_moveit_config ariac_msgs ariac_plugins ariac_sensors"
     subprocess.run(build_cmd, shell=True)
 
 
