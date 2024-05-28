@@ -51,6 +51,21 @@ def main():
         print("Unable to find package_name")
         sys.exit()
     
+    packages_to_skip = ["ariac_controllers", "ariac_description", "ariac_gui", "ariac_moveit_config", "ariac_msgs", "ariac_plugins", "ariac_sensors"]
+    colcon_args = ["--packages-skip"] + packages_to_skip
+    
+    try:
+        colcon_args = colcon_args + data["build"]["extra_colcon_args"]
+    except KeyError:
+        pass
+    
+    rosdep_install_args = ["--from-paths", "src", "--ignore-src", "-y"]
+    
+    try:
+        rosdep_install_args = rosdep_install_args + data["build"]["extra_rosdep_args"]
+    except KeyError:
+        pass
+    
     # Clone the repository
     if team_name == "nist_competitor":
         clone_cmd = f"git clone https://{repository} /workspace/src/{team_name} --branch {tag}"
@@ -70,7 +85,7 @@ def main():
 
     # Install rosdep packages
     os.chdir('/workspace') 
-    rosdep_cmd = "rosdep install --from-paths src --ignore-src -y"
+    rosdep_cmd = "rosdep install " + " ".join([str(arg) for arg in rosdep_install_args])
     rosdep_update_cmd = "rosdep update --include-eol-distros"
     rosdep_fix_cmd = " sudo apt-get update"
     subprocess.run(rosdep_fix_cmd, shell=True)
@@ -78,7 +93,7 @@ def main():
     subprocess.run(rosdep_cmd, shell=True)
 
     # Build the workspace
-    build_cmd = "colcon build --packages-skip ariac_controllers ariac_description ariac_gui ariac_moveit_config ariac_msgs ariac_plugins ariac_sensors"
+    build_cmd = "colcon build " + " ".join([str(arg) for arg in colcon_args])
     subprocess.run(build_cmd, shell=True)
 
 

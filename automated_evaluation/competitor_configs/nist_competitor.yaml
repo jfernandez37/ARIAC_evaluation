@@ -9,8 +9,9 @@ github:
 
 build:
   pre_build_scripts: ["nist_competitor_pre_build.sh"]
+  extra_colcon_args: []
+  extra_rosdep_args: []
 
 competition:
   package_name: "nist_competitor"
   launch_file: "competition.launch.py"
-
