@@ -7,6 +7,13 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import subprocess
+import pyscreenrec
+from time import sleep
+import pyautogui
+import cv2
+import docker
+from docker.models.containers import Container as DockerContainer
+from typing import Optional
 
 def get_trial_names(team_names: list[str]) -> list[str]:
     """Parses the logs folder of each team found to find all the trials which have been run.
@@ -110,6 +117,67 @@ def filter_best_trial_logs(team_names, trial_names):
     print("Filtering state.log" + ("" if len(commands)<=1 else "s") + "...")
     end_codes = [s.wait() for s in subprocesses] # Waits until all of the best state logs are filtered
     print(f"Saved state logs" + ("" if len(commands)<=1 else "s")+"\n\nTo find filtered state.logs, go to /filtered_state_logs/team/trial")
+
+def record_each_trial_log(team_names, trial_names):
+    recorder = pyscreenrec.ScreenRecorder()
+    docker_client = docker.DockerClient()
+    all_containers: list[DockerContainer] = docker_client.containers.list(all=True)
+    
+    team_containers: dict[str, Optional[DockerContainer]]  = {team : None for team in team_names}
+    for team in team_names:
+        for container in all_containers:
+            if container.name == team:
+                team_containers[team] = container
+                break
+    
+    for container in team_containers.values():
+        print("Stopping container",container.name)
+        container.stop()
+    
+    for trial in trial_names:
+        for team, container in team_containers.items():
+            if os.path.exists(os.path.join("filtered_state_logs", team, trial)):
+                container.restart()
+                # recorder.start_recording(f"{team}_{trial}.mp4", 20)
+                subprocess.Popen(["./scoring_playback.sh", team, trial])
+                # Create an Empty window
+                # cv2.namedWindow("Live", cv2.WINDOW_NORMAL)
+                
+                # Resize this window
+                # cv2.resizeWindow("Live", 480, 270)
+                sleep(25)
+                keep_recording = True
+                first = True
+                while keep_recording:
+                    # Take screenshot using PyAutoGUI
+                    img = pyautogui.screenshot()
+                
+                    # Convert the screenshot to a numpy array
+                    frame = np.array(img)[960:1010, 530:580]
+                    
+                    
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    
+                    if not first:
+                        comparison = prev == frame
+                        
+                        keep_recording = comparison.all()
+                    else:
+                        print("first")
+                        first = False
+                    prev = frame
+                    
+                    # # Optional: Display the recording screen
+                    # cv2.imshow('Live', frame)
+                    
+                    # if cv2.waitKey(1) == ord('q'):
+                    #     break
+    for container in team_containers.values():
+        print("Stopping container",container.name)
+        container.stop()
+    print("Done recording trials")
+                
+                
 
 def main():
     team_names = get_team_names()
@@ -243,6 +311,7 @@ def main():
     #         plt.savefig(f"graphs/{team}/{trial}.png")
     #         plt.clf()
     # filter_best_trial_logs(team_names, trial_names)
+    record_each_trial_log(team_names, trial_names)
     
     
 if __name__ == "__main__":
