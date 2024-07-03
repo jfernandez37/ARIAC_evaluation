@@ -41,7 +41,7 @@ def team_raw_score_graph(trial: str, team: str, orders: list[OrderInfo], submiss
             x.append(0.6 + offset + (1.2 * i))
 
         bars = ax.bar(x, [p if not p==0 else 0.2 for p in points], bar_width, label=label, color=color)
-        ax.bar_label(bars, padding=3, fmt='{:.0f}')
+        ax.bar_label(bars, padding=3)
 
         actual = False
 

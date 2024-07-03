@@ -7,7 +7,7 @@ import cv2
 import docker
 import pyautogui
 
-from score_trial import score_trial
+from score_trial import score_trial, create_graphs
 from docker.models.containers import Container as DockerContainer
 from pathlib import Path
 from typing import Optional
@@ -83,6 +83,11 @@ def filter_best_trial_logs(team_names, trial_names):
     end_codes = [s.wait() for s in subprocesses] # Waits until all of the best state logs are filtered
     print(f"Saved state logs" + ("" if len(commands)<=1 else "s")+"\n\nTo find filtered state.logs, go to /filtered_state_logs/team/trial")
 
+
+def avi_to_mp4(avi_file_path: str, output_file_name: str):
+    p = subprocess.Popen(f"ffmpeg -i '{avi_file_path}' -ac 2 -b:v 2000k -c:a aac -c:v libx264 -b:a 160k -vprofile high -bf 0 -strict experimental -f mp4 '{output_file_name}.mp4' -y", shell=True)
+    p.wait()
+
 def record_each_trial_log(team_names, trial_names):
     # recorder = pyscreenrec.ScreenRecorder()
     docker_client = docker.DockerClient()
@@ -154,8 +159,10 @@ def record_each_trial_log(team_names, trial_names):
                     out.write(frame)
                     
                 container.stop()
-                print(f"Finished recording for {team} on trial {trial}")
-                os.system(f"mv {team}_{trial}.avi {os.path.join('recordings', team, trial, f'{team}_{trial}.avi')}")
+                
+                avi_to_mp4(f'{team}_{trial}.avi', f'{team}_{trial}')
+                
+                os.system(f"mv {team}_{trial}.mp4 {os.path.join('recordings', team, trial, f'{team}_{trial}.mp4')}")
     for container in team_containers.values():
         print("Stopping container",container.name)
         container.stop()
@@ -184,6 +191,7 @@ def main():
             final_scores[team] += score
 
         # Generate graphs
+        create_graphs(results)
 
     # Sort final scores in descending order
     final_scores = dict(sorted(final_scores.items(), key=lambda item: -item[1]))
@@ -192,7 +200,7 @@ def main():
     generate_summary(final_scores)
     
     # Filter the state.logs
-    filter_best_trial_logs(competing_teams, trial_names)
+    # filter_best_trial_logs(competing_teams, trial_names)
     
     # Screen records each trial
     record_each_trial_log(competing_teams, trial_names)
