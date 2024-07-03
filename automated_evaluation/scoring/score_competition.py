@@ -2,7 +2,7 @@ import os
 import yaml
 import subprocess
 import numpy as np
-from time import time, sleep
+from time import time
 import cv2
 import docker
 import pyautogui
@@ -21,8 +21,8 @@ def get_competing_teams() -> list[str]:
             if not file.endswith('.yaml'):
                 continue
 
-            # if "nist_competitor" in file:
-            #     continue
+            if "nist_competitor" in file:
+                continue
 
             competitor_configs.append(os.path.join(root, file))
 
@@ -88,8 +88,8 @@ def avi_to_mp4(avi_file_path: str, output_file_name: str):
     p = subprocess.Popen(f"ffmpeg -i '{avi_file_path}' -ac 2 -b:v 2000k -c:a aac -c:v libx264 -b:a 160k -vprofile high -bf 0 -strict experimental -f mp4 '{output_file_name}.mp4' -y", shell=True)
     p.wait()
 
+
 def record_each_trial_log(team_names, trial_names):
-    # recorder = pyscreenrec.ScreenRecorder()
     docker_client = docker.DockerClient()
     all_containers: list[DockerContainer] = docker_client.containers.list(all=True)
         
@@ -200,7 +200,7 @@ def main():
     generate_summary(final_scores)
     
     # Filter the state.logs
-    # filter_best_trial_logs(competing_teams, trial_names)
+    filter_best_trial_logs(competing_teams, trial_names)
     
     # Screen records each trial
     record_each_trial_log(competing_teams, trial_names)
