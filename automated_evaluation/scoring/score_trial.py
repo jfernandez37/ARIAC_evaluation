@@ -348,7 +348,7 @@ def score_trial(trial: str, team_names: list[str], wc: float=1.0, wt: float=1.0)
         trial_score *= cost_factor
         trial_scores[team] = trial_score
 
-    return TrialInfo(trial, trial_scores, submissions)
+    return TrialInfo(trial, trial_scores, submissions, {team : get_best_run(team, trial) for team in team_names})
 
 def create_graphs(trial_info: TrialInfo):
     orders = get_order_information(trial_info.trial_name)
