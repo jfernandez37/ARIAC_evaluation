@@ -8,12 +8,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import subprocess
 import pyscreenrec
-from time import sleep
+from time import sleep, time
 import pyautogui
 import cv2
 import docker
 from docker.models.containers import Container as DockerContainer
 from typing import Optional
+from pathlib import Path
+from multiprocessing import Process
+import multiprocessing as mp
+
+mutex = []
 
 def get_trial_names(team_names: list[str]) -> list[str]:
     """Parses the logs folder of each team found to find all the trials which have been run.
@@ -118,10 +123,62 @@ def filter_best_trial_logs(team_names, trial_names):
     end_codes = [s.wait() for s in subprocesses] # Waits until all of the best state logs are filtered
     print(f"Saved state logs" + ("" if len(commands)<=1 else "s")+"\n\nTo find filtered state.logs, go to /filtered_state_logs/team/trial")
 
+def screen_record(team, trial, recorder, l):
+    print("In recorder process")
+    recorder.start_recording(f"{team}_{trial}.mp4", 20)
+    subprocess.Popen(["./scoring_playback.sh", team, trial])
+    sleep(5)
+    print("Waiting in recorder process")
+    l.acquire()
+    try:
+        print("Out of wait in recorder process")
+        recorder.stop_recording()
+    finally:
+        l.release()
+
+def detect_pause_change(l, sleep_time):
+    print("In pause scan thread")
+    l.acquire()
+    print("before sleep")
+    sleep(sleep_time)
+    print("after sleep")
+    first = True
+    keep_recording = True
+    while keep_recording:
+        # Take screenshot using PyAutoGUI
+        img = pyautogui.screenshot()
+    
+        # Convert the screenshot to a numpy array
+        frame = np.array(img)[960:1010, 530:580]
+        
+        
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        if not first:
+            comparison = prev == frame
+            
+            if comparison.all():
+                keep_recording = False
+        else:
+            print("first")
+            first = False
+        prev = frame
+        cv2.imshow('Live', frame)
+                    
+        if cv2.waitKey(1) == ord('q'):
+            break
+        sleep(10)
+    print("Change detected")
+    l.release()
+        
+        
+
 def record_each_trial_log(team_names, trial_names):
-    recorder = pyscreenrec.ScreenRecorder()
+    # recorder = pyscreenrec.ScreenRecorder()
     docker_client = docker.DockerClient()
     all_containers: list[DockerContainer] = docker_client.containers.list(all=True)
+    
+    lock = mp.Lock()
     
     team_containers: dict[str, Optional[DockerContainer]]  = {team : None for team in team_names}
     for team in team_names:
@@ -133,45 +190,78 @@ def record_each_trial_log(team_names, trial_names):
     for container in team_containers.values():
         print("Stopping container",container.name)
         container.stop()
+        
+    for trial in trial_names:
+        for team in team_containers.keys():
+            path = Path(os.path.join("recordings", team, trial))
+            path.mkdir(parents=True, exist_ok=True)
     
     for trial in trial_names:
         for team, container in team_containers.items():
             if os.path.exists(os.path.join("filtered_state_logs", team, trial)):
                 container.restart()
-                # recorder.start_recording(f"{team}_{trial}.mp4", 20)
-                subprocess.Popen(["./scoring_playback.sh", team, trial])
-                # Create an Empty window
-                # cv2.namedWindow("Live", cv2.WINDOW_NORMAL)
                 
-                # Resize this window
-                # cv2.resizeWindow("Live", 480, 270)
-                sleep(25)
+                # Specify resolution
+                resolution = (1920, 1080)
+                
+                # Specify video codec
+                codec = cv2.VideoWriter_fourcc(*"XVID")
+                
+                # Specify name of Output file
+                filename = f"{team}_{trial}.avi"
+                
+                # Specify frames rate. We can choose 
+                # any value and experiment with it
+                fps = 60.0
+                
+                # Creating a VideoWriter object
+                out = cv2.VideoWriter(filename, codec, fps, resolution)
+
+                # screen_record_process = Process(target=screen_record, args=(team, trial, recorder, lock))
+                # detect_pause_change_process = Process(target=detect_pause_change, args=(lock, 25))
+                # screen_record_process.start()
+                # detect_pause_change_process.start()
+                # screen_record_process.join()
+                # recorder.start_recording(f"{team}_{trial}.mp4", 20)
+                # subprocess.Popen(["./scoring_playback.sh", team, trial])
+                # # Create an Empty window
+                
+                # sleep(25)
                 keep_recording = True
                 first = True
+                
+                subprocess.Popen(["./scoring_playback.sh", team, trial])
+                
+                start_time = time()
                 while keep_recording:
                     # Take screenshot using PyAutoGUI
                     img = pyautogui.screenshot()
                 
                     # Convert the screenshot to a numpy array
-                    frame = np.array(img)[960:1010, 530:580]
-                    
+                    frame = np.array(img)
                     
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    
-                    if not first:
-                        comparison = prev == frame
-                        
-                        keep_recording = comparison.all()
-                    else:
-                        print("first")
-                        first = False
-                    prev = frame
                     
+                    pause_frame = frame[960:1010, 530:580]
+                    
+                    if time() - start_time >= 25:
+                        if not first:
+                            comparison = prev == pause_frame
+                            
+                            keep_recording = comparison.all()
+                        else:
+                            print("first")
+                            first = False
+                        prev = pause_frame
+                    
+                    out.write(frame)
                     # # Optional: Display the recording screen
                     # cv2.imshow('Live', frame)
                     
                     # if cv2.waitKey(1) == ord('q'):
                     #     break
+                # recorder.stop_recording()
+                os.system(f"mv {team}_{trial}.avi {os.path.join('recordings', team, trial, f'{team}_{trial}.avi')}")
     for container in team_containers.values():
         print("Stopping container",container.name)
         container.stop()
