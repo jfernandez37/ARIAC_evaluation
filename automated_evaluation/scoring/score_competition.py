@@ -138,7 +138,7 @@ def record_each_trial_log(team_names: str, trial_names: str):
                 container.restart()
                 
                 # Specify resolution
-                resolution = (1920, 1080)
+                resolution = (1559, 812)
                 
                 # Specify video codec
                 codec = cv2.VideoWriter_fourcc(*"XVID")
@@ -156,7 +156,7 @@ def record_each_trial_log(team_names: str, trial_names: str):
                 first = True
                 
                 subprocess.Popen(["./scoring_playback.sh", team, trial])
-                
+
                 start_time = time()
                 while keep_recording:
                     # Take screenshot using PyAutoGUI
@@ -169,6 +169,7 @@ def record_each_trial_log(team_names: str, trial_names: str):
                     
                     pause_frame = frame[960:1010, 530:580]
                     
+                    output_frame = frame[134:946, 340:1899]
                     if time() - start_time >= 25:
                         if not first:
                             comparison = prev == pause_frame
@@ -179,7 +180,7 @@ def record_each_trial_log(team_names: str, trial_names: str):
                             first = False
                         prev = pause_frame
                     
-                    out.write(frame)
+                    out.write(output_frame)
                     
                 container.stop()
                 
@@ -223,7 +224,7 @@ def main():
     generate_summary(final_scores)
     
     # Filter the state.logs
-    filter_best_trial_logs(competing_teams, trial_names)
+    # filter_best_trial_logs(competing_teams, trial_names)
     
     # Screen records each trial
     record_each_trial_log(competing_teams, trial_names)
