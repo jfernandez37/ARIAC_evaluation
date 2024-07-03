@@ -58,12 +58,23 @@ def get_trial_names() -> list[str]:
 
 
 def generate_summary(final_scores: dict[str, float]):
+    """Builds a leaderboard for each team with their final score
+
+    Args:
+        final_scores (dict[str, float]): final scores for each team
+    """
     print("Final Scores:")
     for team, score in final_scores.items():
         print(f"\t{team}: {score}")
 
 
-def filter_best_trial_logs(team_names, trial_names):
+def filter_best_trial_logs(team_names: str, trial_names: str):
+    """Filters the trial logs for all state.logs which exist
+
+    Args:
+        team_names (str): list of competing team names
+        trial_names (str): list of trial names being scored
+    """
     commands = []
     if not os.path.exists("filtered_state_logs"):
         os.mkdir("filtered_state_logs")
@@ -85,11 +96,23 @@ def filter_best_trial_logs(team_names, trial_names):
 
 
 def avi_to_mp4(avi_file_path: str, output_file_name: str):
+    """Converts avi recording to an mp4 recording
+
+    Args:
+        avi_file_path (str): path to the avi file
+        output_file_name (str): path to the mp4 file
+    """
     p = subprocess.Popen(f"ffmpeg -i '{avi_file_path}' -ac 2 -b:v 2000k -c:a aac -c:v libx264 -b:a 160k -vprofile high -bf 0 -strict experimental -f mp4 '{output_file_name}.mp4' -y", shell=True)
     p.wait()
 
 
-def record_each_trial_log(team_names, trial_names):
+def record_each_trial_log(team_names: str, trial_names: str):
+    """Records each of the trials
+
+    Args:
+        team_names (str): list of competing team names
+        trial_names (str): list of trial names being scored
+    """
     docker_client = docker.DockerClient()
     all_containers: list[DockerContainer] = docker_client.containers.list(all=True)
         
