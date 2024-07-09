@@ -211,7 +211,7 @@ if __name__ == "__main__":
     if rebuild_containers:
         for team in team_names:
             # Remove existing containers
-            if team_containers[team] is not None:
+            if team_containers[team] is not None and team.lower() != "sirius":
                 container.remove(force=True)
             
             # Build new container
